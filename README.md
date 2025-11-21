@@ -61,7 +61,7 @@ Your input shapes the future of this tool.
 
 ```bash
 # Quick contribution setup
-git clone https://github.com/your-repo/ml-container-creator
+git clone https://github.com/awslabs/ml-container-creator
 cd ml-container-creator
 npm install
 # Make your changes and submit a PR!
