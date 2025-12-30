@@ -83,6 +83,12 @@ setup_test_environment() {
     mkdir -p "$TEST_OUTPUT_DIR"
     cd "$TEST_OUTPUT_DIR"
     
+    # Ensure Yeoman is available
+    if ! command -v yo &> /dev/null; then
+        print_info "Installing Yeoman globally..."
+        npm install -g yo > /dev/null 2>&1 || true
+    fi
+    
     # Ensure generator is linked
     npm link > /dev/null 2>&1 || true
     
