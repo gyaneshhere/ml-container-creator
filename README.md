@@ -589,7 +589,8 @@ This project is licensed under the Apache-2.0 License.
 
 ### Get Help
 - 📖 [Examples Guide](./docs/EXAMPLES.md) - Detailed walkthroughs
-- 🔧 [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) - Common issues and solutions
+- 🔧 [Troubleshooting Guide](./TROUBLESHOOTING.md) - Common issues and solutions
+- 🔧 [Advanced Troubleshooting](./docs/TROUBLESHOOTING.md) - Development and CI issues
 - 🐛 [Report Issues](https://github.com/awslabs/ml-container-creator/issues)
 - 💬 [Community Discussions](https://github.com/awslabs/ml-container-creator/discussions)
 - 🗺️ [Roadmap & Feature Requests](https://github.com/awslabs/ml-container-creator/projects)
@@ -602,8 +603,7 @@ This project is licensed under the Apache-2.0 License.
 # Check logs
 docker logs your-container-name
 
-# See detailed solutions
-# https://github.com/awslabs/ml-container-creator/blob/main/docs/TROUBLESHOOTING.md#container-wont-start
+# See detailed solutions in troubleshooting guide
 ```
 
 **SageMaker deployment fails**
@@ -611,11 +611,10 @@ docker logs your-container-name
 # Check CloudWatch logs
 aws logs tail /aws/sagemaker/Endpoints/your-endpoint --follow
 
-# See detailed solutions
-# https://github.com/awslabs/ml-container-creator/blob/main/docs/TROUBLESHOOTING.md#endpoint-creation-failed
+# See detailed solutions in troubleshooting guide
 ```
 
-**Need more help?** Check the [full troubleshooting guide](./docs/TROUBLESHOOTING.md)
+**Need more help?** Check the [troubleshooting guide](./TROUBLESHOOTING.md) for common issues and solutions.
 
 <div align="center">
   <p>Made with ❤️ by the ML community, for the ML community</p>

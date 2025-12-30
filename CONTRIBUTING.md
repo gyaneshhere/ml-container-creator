@@ -61,9 +61,10 @@ npm run validate
 
 ### Test Organization
 
-Our test suite is organized into focused modules for easy contribution:
+Our test suite is organized into two complementary layers:
 
-#### 📋 Unit Tests (`test/input-parsing-and-generation/`)
+#### 📋 **Unit Tests** (`test/` directory)
+Focused tests for specific functionality organized by capability. See **[`test/README.md`](./test/README.md)** for detailed documentation.
 
 - **CLI Options** (`cli-options.test.js`) - CLI option parsing and validation
 - **Environment Variables** (`environment-variables.test.js`) - Environment variable handling  
@@ -71,27 +72,49 @@ Our test suite is organized into focused modules for easy contribution:
 - **Configuration Precedence** (`configuration-precedence.test.js`) - Multi-source precedence
 - **File Generation** (`file-generation.test.js`) - Template processing and file creation
 - **Error Handling** (`error-handling.test.js`) - Validation and error scenarios
+- **Property-Based Tests** - 10 universal correctness properties with 1000+ test iterations
 
-#### 🔬 Property-Based Tests
+#### 🚀 **Integration Tests** (`scripts/` directory)
+End-to-end project generation and validation scripts. See **[`scripts/README.md`](./scripts/README.md)** for detailed documentation.
 
-- **Parameter Matrix Compliance** - 10 universal correctness properties
-- **Comprehensive Coverage** - 1000+ test iterations across all parameter combinations
-- **Automated Validation** - Tests all configuration sources and precedence rules
+- **`test-generate-projects.sh`** - Comprehensive project generation testing across all configurations
+- **`test-generate-configs.sh`** - Configuration file generation for manual testing
+- **`test-generation-parameters.sh`** - Flexible test runner with different verbosity levels
+
+### Quick Reference: Which Tests to Add Where
+
+| What You're Adding | Where to Add Tests | Documentation |
+|-------------------|-------------------|---------------|
+| **New CLI option** | `test/input-parsing-and-generation/cli-options.test.js` | [`test/README.md`](./test/README.md) |
+| **New environment variable** | `test/input-parsing-and-generation/environment-variables.test.js` | [`test/README.md`](./test/README.md) |
+| **New configuration option** | `test/input-parsing-and-generation/configuration-files.test.js` | [`test/README.md`](./test/README.md) |
+| **New framework support** | Both unit tests + `scripts/test-generate-projects.sh` | Both README files |
+| **New template/file generation** | `test/input-parsing-and-generation/file-generation.test.js` | [`test/README.md`](./test/README.md) |
+| **New validation/error handling** | `test/input-parsing-and-generation/error-handling.test.js` | [`test/README.md`](./test/README.md) |
+| **End-to-end scenarios** | `scripts/test-generate-projects.sh` | [`scripts/README.md`](./scripts/README.md) |
+| **Universal correctness properties** | `test/input-parsing-and-generation/parameter-matrix-compliance.property.test.js` | [`test/README.md`](./test/README.md) |
 
 ### Writing Tests for New Features
 
-When adding new functionality, include appropriate tests:
+When adding new functionality, include appropriate tests. **See [`test/README.md`](./test/README.md) and [`scripts/README.md`](./scripts/README.md) for comprehensive testing guidelines.**
 
-#### 1. Choose the Right Test Module
+#### 1. Choose the Right Test Location
 
-- **CLI option changes** → `cli-options.test.js`
-- **Environment variable changes** → `environment-variables.test.js`
-- **Config file changes** → `configuration-files.test.js`
-- **Precedence changes** → `configuration-precedence.test.js`
-- **Template/file changes** → `file-generation.test.js`
+**Unit Tests** (fast, focused testing):
+- **CLI option changes** → `test/input-parsing-and-generation/cli-options.test.js`
+- **Environment variable changes** → `test/input-parsing-and-generation/environment-variables.test.js`
+- **Config file changes** → `test/input-parsing-and-generation/configuration-files.test.js`
+- **Precedence changes** → `test/input-parsing-and-generation/configuration-precedence.test.js`
+- **Template/file changes** → `test/input-parsing-and-generation/file-generation.test.js`
+
+**Integration Tests** (end-to-end validation):
+- **New framework support** → `scripts/test-generate-projects.sh`
+- **New configuration scenarios** → `scripts/test-generate-projects.sh`
+- **Configuration file generation** → `scripts/test-generate-configs.sh`
 
 #### 2. Follow Our Test Patterns
 
+**Unit Test Example:**
 ```javascript
 import { 
     getGeneratorPath, 
@@ -111,18 +134,47 @@ describe('Your Feature Category', () => {
     setupTestHooks('Your Feature Category');
 
     it('should handle your specific functionality', async () => {
-        console.log(`\n  🧪 Testing your functionality...`);
+        console.log(`\n  🧪 Test #1: Testing your functionality...`);
+        console.log(`  📍 Test Suite: Your Feature Category`);
         
         await helpers.default.run(getGeneratorPath())
-            .withOptions({ /* your test options */ });
+            .withOptions({ 
+                framework: 'sklearn',
+                yourNewOption: 'test-value',
+                skipPrompts: true
+            });
 
-        validateFiles(['expected-file.txt'], 'your test context');
-        console.log(`    ✅ Functionality working correctly`);
+        validateFiles(['expected-file.txt'], 'your feature test');
+        console.log(`    ✅ Your functionality working correctly`);
     });
 });
 ```
 
+**Integration Test Example:**
+```bash
+# Add to scripts/test-generate-projects.sh
+test_your_new_feature() {
+    local test_name="$1"
+    
+    print_substep "Testing your new feature: $test_name"
+    
+    mkdir -p "your-feature-test"
+    cd "your-feature-test"
+    
+    if yo ml-container-creator --your-new-option --skip-prompts > ../test.log 2>&1; then
+        validate_files ["expected-file.txt"] "your feature test"
+        cd ..
+        record_test_result "Your Feature" "PASS"
+    else
+        cd ..
+        record_test_result "Your Feature" "FAIL"
+    fi
+}
+```
+
 #### 3. Test Both Success and Failure Cases
+
+Always include both positive and negative test cases:
 
 ```javascript
 // Test successful case
@@ -147,23 +199,7 @@ it('should show error for invalid configuration', async () => {
 
 #### 4. Add Property Tests for Universal Behavior
 
-If your feature affects parameter handling, consider adding property tests:
-
-```javascript
-// Add to parameter-matrix-compliance.property.test.js
-describe('Property N: Your Universal Property', () => {
-    it('should maintain universal correctness for your feature', async function() {
-        await fc.assert(fc.asyncProperty(
-            generateYourTestData(),
-            async (testData) => {
-                // Test your universal property
-                const result = await testYourFeature(testData);
-                return validateUniversalProperty(result);
-            }
-        ), { numRuns: 100 });
-    });
-});
-```
+If your feature affects parameter handling, consider adding property tests. See [`test/README.md`](./test/README.md) for detailed property testing guidelines.
 
 ### Running Tests During Development
 
@@ -175,6 +211,9 @@ npm run test:property:watch     # Property tests in watch mode
 # Run specific test categories
 npm test -- --grep "CLI Options"     # Your specific functionality
 npm test -- --grep "sklearn"         # Framework-specific tests
+
+# Run integration tests
+./scripts/test-generate-projects.sh --verbose --keep-output
 
 # Quick validation before committing
 npm run validate                # Full test suite + linting
@@ -190,18 +229,9 @@ npm run validate                # Full test suite + linting
 
 ### Debugging Failed Tests
 
-Our tests provide excellent debugging information:
-
-```bash
-# Run with full debug output
-npm test -- --grep "your failing test"
-
-# Check the detailed output:
-# 🔍 DEBUG: Current state for test failure:
-# 📁 Working directory: /tmp/test-dir
-# 📄 Files in current directory: [list of files]
-# 📊 Expected vs actual file content
-```
+Our tests provide excellent debugging information. See the respective README files for detailed debugging guidance:
+- **Unit test debugging**: [`test/README.md`](./test/README.md#debugging-failed-tests)
+- **Integration test debugging**: [`scripts/README.md`](./scripts/README.md#troubleshooting)
 
 ### CI/CD Integration
 
