@@ -2,9 +2,23 @@
 
 Common issues and solutions for ML Container Creator.
 
+## Quick Reference - Most Common Issues
+
+| Issue | Quick Fix |
+|-------|-----------|
+| `SyntaxError: Unexpected token 'export'` | `nvm use node` |
+| `yo: command not found` | `npm install -g yo@latest` |
+| Test script hanging | Run with `--verbose`, check directory isolation |
+| ESLint errors | `npm run lint -- --fix` |
+| npm audit failing CI | Only fail on critical: `npm audit --audit-level critical` |
+| Property tests failing | Run from project root directory |
+| Generator not found | `npm link` in project directory |
+
 ## Table of Contents
 
 - [Generator Issues](#generator-issues)
+- [Development & Testing Issues](#development--testing-issues)
+- [CI/CD Issues](#cicd-issues)
 - [Docker Build Issues](#docker-build-issues)
 - [Local Testing Issues](#local-testing-issues)
 - [AWS Deployment Issues](#aws-deployment-issues)
@@ -42,6 +56,10 @@ npm install -g yo
 **Symptom:**
 ```bash
 Error: The engine "node" is incompatible with this module
+# OR
+SyntaxError: Unexpected token 'export'
+# OR  
+SyntaxError: Cannot use import statement outside a module
 ```
 
 **Solution:**
@@ -49,13 +67,16 @@ Error: The engine "node" is incompatible with this module
 # Check Node version
 node --version
 
-# Must be 24.11.1 or higher
+# Must be 24.11.1 or higher for ES6 module support
 # Install correct version using nvm
-nvm install 24.11.1
-nvm use 24.11.1
+nvm install node  # Gets latest stable
+nvm use node
 
 # Or use mise
 mise install
+
+# Pro tip: When encountering ES6 import/export errors, 
+# this is usually a Node.js version compatibility issue
 ```
 
 ### Template Variables Not Replaced
@@ -67,6 +88,230 @@ Generated files contain `<%= projectName %>` instead of actual values.
 - Check that templates use `.ejs` extension or are in templates directory
 - Verify `copyTpl` is used, not `copy`
 - Check for EJS syntax errors in templates
+
+### Yeoman Generator Not Working in CI
+
+**Symptom:**
+```bash
+yo: command not found
+# OR
+generator-ml-container-creator not found
+```
+
+**Solution:**
+```bash
+# Install Yeoman globally in CI
+npm install -g yo@latest
+
+# Link the generator
+npm link
+
+# Verify installation
+yo --version
+yo --generators
+```
+
+---
+
+## Development & Testing Issues
+
+### ESLint Errors After Changes
+
+**Symptom:**
+```bash
+✖ 9552 problems (9552 errors, 0 warnings)
+```
+
+**Solution:**
+```bash
+# Auto-fix formatting issues
+npm run lint -- --fix
+
+# Check what files are being linted
+npx eslint --debug generators/
+
+# Update .eslintrc.js ignore patterns for generated files
+"ignorePatterns": [
+    "site/**",
+    "drafts/**", 
+    "test-output-*/**"
+]
+
+# For unused variables, either use them or prefix with underscore
+const _unusedVar = something;  // Indicates intentionally unused
+```
+
+### Test Script Hanging
+
+**Symptom:**
+Test scripts hang indefinitely on certain steps
+
+**Solution:**
+```bash
+# Run with verbose output to see where it hangs
+./scripts/test-generate-projects.sh --verbose
+
+# Common causes:
+# 1. Directory conflicts - each test should run in isolated directory
+# 2. Property tests running from wrong directory - need project root
+# 3. Environment variables not cleaned up between tests
+
+# Fix: Ensure each test creates its own subdirectory
+mkdir -p "test-$test_name"
+cd "test-$test_name"
+# ... run test ...
+cd ..
+```
+
+### Property-Based Tests Failing
+
+**Symptom:**
+```bash
+npm run test:property
+Error: Cannot find module './test/property-tests.js'
+```
+
+**Solution:**
+```bash
+# Property tests must run from project root directory
+cd /path/to/project/root
+npm run test:property
+
+# In scripts, store and use project root:
+PROJECT_ROOT="$(pwd)"
+cd "$PROJECT_ROOT"
+npm run test:property
+```
+
+### Test Output Directory Conflicts
+
+**Symptom:**
+Tests fail because previous test files interfere with new tests
+
+**Solution:**
+```bash
+# Use timestamped directories
+TEST_OUTPUT_DIR="./test-output-$(date +%Y%m%d-%H%M%S)"
+
+# Clean up between test runs
+rm -rf test-output-*
+
+# Or keep output for debugging
+KEEP_TEST_OUTPUT=true ./scripts/test-generate-projects.sh
+```
+
+---
+
+## CI/CD Issues
+
+### npm Security Audit Failures
+
+**Symptom:**
+```bash
+npm audit
+found 11 vulnerabilities (8 moderate, 3 high)
+```
+
+**Solution:**
+```bash
+# Option 1: Use npm overrides in package.json
+"overrides": {
+  "semver": "^7.6.3",
+  "path-to-regexp": "^8.0.0"
+}
+
+# Option 2: Only fail on critical vulnerabilities
+npm audit --audit-level critical
+
+# Option 3: Update dependencies
+npm update
+npm audit fix
+```
+
+### npm Cache Issues in CI
+
+**Symptom:**
+```bash
+Error: EACCES: permission denied, mkdir '/github/home/.npm'
+```
+
+**Solution:**
+```bash
+# Remove npm cache configuration if package-lock.json is gitignored
+# Don't use: npm ci --cache .npm
+
+# Use standard npm install instead
+npm install
+
+# Or configure cache properly
+- name: Cache node modules
+  uses: actions/cache@v3
+  with:
+    path: ~/.npm
+    key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+```
+
+### CI Failing on Moderate Vulnerabilities
+
+**Symptom:**
+CI fails even though vulnerabilities are not critical
+
+**Solution:**
+```yaml
+# In .github/workflows/ci.yml
+# Only fail on critical vulnerabilities
+- name: Security audit
+  run: |
+    if ! npm audit --audit-level critical; then
+      echo "Critical vulnerabilities found!"
+      exit 1
+    fi
+    
+    # Show all vulnerabilities but don't fail
+    npm audit || true
+```
+
+### Yeoman Installation in CI
+
+**Symptom:**
+```bash
+yo: command not found in CI
+```
+
+**Solution:**
+```yaml
+# Install Yeoman before testing
+- name: Install Yeoman
+  run: npm install -g yo@latest
+
+- name: Link generator
+  run: npm link
+
+- name: Test generator
+  run: yo ml-container-creator --help
+```
+
+### ESLint Failing in CI
+
+**Symptom:**
+CI fails on linting errors that pass locally
+
+**Solution:**
+```bash
+# Ensure consistent Node.js version
+# Use same version in CI as locally
+
+# Update .eslintrc.js with proper ignore patterns
+"ignorePatterns": [
+    "node_modules/**",
+    "site/**",
+    "drafts/**",
+    "test-output-*/**"
+]
+
+# Run lint with --fix in CI if needed
+npm run lint -- --fix
+```
 
 ---
 
@@ -700,10 +945,11 @@ curl -X POST http://localhost:8080/invocations -d '...'
 
 ### Before Generating
 
-- ✅ Verify Node.js version (24.11.1+)
+- ✅ Verify Node.js version (24.11.1+) - use `nvm use node` for latest
 - ✅ Have model file ready
 - ✅ Know model format and framework
 - ✅ Have AWS credentials configured
+- ✅ Install Yeoman globally: `npm install -g yo@latest`
 
 ### Before Building
 
@@ -711,6 +957,7 @@ curl -X POST http://localhost:8080/invocations -d '...'
 - ✅ Verify all dependencies in requirements.txt
 - ✅ Check model file size
 - ✅ Review Dockerfile
+- ✅ Run linting: `npm run lint -- --fix`
 
 ### Before Deploying
 
@@ -718,6 +965,7 @@ curl -X POST http://localhost:8080/invocations -d '...'
 - ✅ Verify IAM role permissions
 - ✅ Check ECR repository exists
 - ✅ Confirm instance type availability
+- ✅ Run comprehensive tests: `./scripts/test-generate-projects.sh`
 
 ### Before Production
 
@@ -726,3 +974,13 @@ curl -X POST http://localhost:8080/invocations -d '...'
 - ✅ Configure auto-scaling
 - ✅ Document deployment process
 - ✅ Plan rollback strategy
+
+### Development Best Practices
+
+- ✅ Use `nvm use node` when encountering ES6 import errors
+- ✅ Run tests in isolated directories to avoid conflicts
+- ✅ Keep test output for debugging: `KEEP_TEST_OUTPUT=true`
+- ✅ Use verbose mode for troubleshooting: `--verbose`
+- ✅ Clean up environment variables between tests
+- ✅ Only fail CI on critical security vulnerabilities
+- ✅ Use npm overrides for dependency security patches
