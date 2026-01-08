@@ -18,9 +18,6 @@ import helpers from 'yeoman-test';
 import assert from 'yeoman-assert';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { 
-    generateValidConfiguration 
-} from './config-generators.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

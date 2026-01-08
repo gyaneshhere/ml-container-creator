@@ -14,7 +14,6 @@ import fc from 'fast-check';
 import {
     getGeneratorPath,
     validateFiles,
-    validateNoFiles as _validateNoFiles,
     setupTestHooks
 } from './test-utils.js';
 

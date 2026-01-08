@@ -30,6 +30,7 @@
     "validate": "npm run lint && npm run test:all"
   },
   "dependencies": {
+    "@microsoft/eslint-formatter-sarif": "^3.1.0",
     "license-report": "^6.8.0",
     "lodash": "^4.17.21",
     "yeoman-generator": "^7.5.1",

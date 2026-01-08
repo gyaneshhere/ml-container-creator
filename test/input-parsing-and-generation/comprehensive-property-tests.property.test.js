@@ -21,11 +21,8 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { 
-    generateCodeBuildConfiguration,
     generateValidConfiguration,
-    generateRealisticCliOptions as _generateRealisticCliOptions,
-    generateRealisticEnvironmentVars as _generateRealisticEnvironmentVars,
-    generateRealisticPackageJsonConfig as _generateRealisticPackageJsonConfig
+    generateCodeBuildConfiguration
 } from './config-generators.js';
 import { PROPERTY_TEST_CONFIG } from './property-test-utils.js';
 
@@ -303,12 +300,10 @@ describe('Property Test: Comprehensive Property-Based Test Coverage', function()
                     // With invalid configuration, core files should not be generated
                     // (This assumes the generator validates inputs before generating files)
                     const coreFiles = ['Dockerfile', 'requirements.txt'];
-                    let _filesGenerated = 0;
                     
+                    // Check if files were generated (for future validation)
                     for (const file of coreFiles) {
-                        if (fs.existsSync(path.join(runContext.targetDirectory, file))) {
-                            _filesGenerated++;
-                        }
+                        fs.existsSync(path.join(runContext.targetDirectory, file));
                     }
                     
                     // If files were generated despite invalid config, that's a validation failure
