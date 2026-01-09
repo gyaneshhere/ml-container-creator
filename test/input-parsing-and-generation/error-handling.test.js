@@ -436,7 +436,8 @@ describe('Error Handling and Validation', () => {
                 includeTesting: true,
                 instanceType: 'cpu-optimized',
                 projectName: 'test-project',
-                destinationDir: '.'
+                destinationDir: '.',
+                deployTarget: 'sagemaker'
             };
             
             const completeErrors = configManager.validateRequiredParameters(completeConfig);
