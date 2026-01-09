@@ -13,7 +13,7 @@ import numpy as np
 # Load the trained model
 <% if (framework === 'sklearn') { %>
 <% if (modelFormat === 'joblib') { %>model = joblib.load('./abalone_model.joblib')
-<% } else if (modelFormat === 'pkl') { %>
+<% } else if (modelFormat === 'pkl') { -%>
 with open('./abalone_model.pkl', 'rb') as f:
     model = pickle.load(f)
 <% } %>

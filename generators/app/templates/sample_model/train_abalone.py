@@ -108,7 +108,7 @@ print(f"Model trained and saved. Test MAE: {test_mae:.3f}")
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 <% if (modelFormat === 'joblib') { %>joblib.dump(model, os.path.join(script_dir, 'abalone_model.joblib'))
-<% } else if (modelFormat === 'pkl') { %>
+<% } else if (modelFormat === 'pkl') { -%>
 with open(os.path.join(script_dir, 'abalone_model.pkl'), 'wb') as f:
     pickle.dump(model, f)
 <% } else if (modelFormat === 'json') { %>model.save_model(os.path.join(script_dir, 'abalone_model.json'))
