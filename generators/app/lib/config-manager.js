@@ -183,6 +183,17 @@ export default class ConfigManager {
             finalConfig.includeSampleModel = false;
         }
         
+        // Set destinationDir based on projectName if not explicitly provided
+        // Only do this if destinationDir is still the default value '.'
+        if (finalConfig.destinationDir === '.' && finalConfig.projectName) {
+            // Check if destinationDir was explicitly set via CLI or config
+            const explicitDestination = explicitConfig.destinationDir;
+            if (!explicitDestination) {
+                // User didn't explicitly set destination, so use projectName as directory
+                finalConfig.destinationDir = `./${finalConfig.projectName}`;
+            }
+        }
+        
         // Generate CodeBuild project name if deployTarget is codebuild
         if (finalConfig.deployTarget === 'codebuild' && !finalConfig.codebuildProjectName) {
             finalConfig.codebuildProjectName = this._generateCodeBuildProjectName(
