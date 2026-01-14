@@ -46,6 +46,7 @@ describe.skip('CodeBuild Integration Tests', function() {
             runContext = await helpers.run(path.join(__dirname, '../../generators/app'))
                 .inDir(path.join(__dirname, '../../.kiro/project-testing'))
                 .withArguments(['test-codebuild-project'])
+                .withOptions({'project-dir': '.'})  // Generate in test directory root
                 .withPrompts({
                     framework: 'sklearn',
                     modelServer: 'flask',
@@ -88,6 +89,7 @@ describe.skip('CodeBuild Integration Tests', function() {
             runContext = await helpers.run(path.join(__dirname, '../../generators/app'))
                 .inDir(path.join(__dirname, '../../.kiro/project-testing'))
                 .withArguments(['test-buildspec'])
+                .withOptions({'project-dir': '.'})  // Generate in test directory root
                 .withPrompts({
                     framework: 'tensorflow',
                     modelServer: 'fastapi',
@@ -123,6 +125,7 @@ describe.skip('CodeBuild Integration Tests', function() {
             runContext = await helpers.run(path.join(__dirname, '../../generators/app'))
                 .inDir(path.join(__dirname, '../../.kiro/project-testing'))
                 .withArguments(['test-submit-build'])
+                .withOptions({'project-dir': '.'})  // Generate in test directory root
                 .withPrompts({
                     framework: 'xgboost',
                     modelServer: 'flask',
@@ -156,6 +159,7 @@ describe.skip('CodeBuild Integration Tests', function() {
             runContext = await helpers.run(path.join(__dirname, '../../generators/app'))
                 .inDir(path.join(__dirname, '../../.kiro/project-testing'))
                 .withArguments(['test-iam-docs'])
+                .withOptions({'project-dir': '.'})  // Generate in test directory root
                 .withPrompts({
                     framework: 'transformers',
                     modelServer: 'vllm',
@@ -188,6 +192,7 @@ describe.skip('CodeBuild Integration Tests', function() {
             runContext = await helpers.run(path.join(__dirname, '../../generators/app'))
                 .inDir(path.join(__dirname, '../../.kiro/project-testing'))
                 .withArguments(['test-deploy-integration'])
+                .withOptions({'project-dir': '.'})  // Generate in test directory root
                 .withPrompts({
                     framework: 'sklearn',
                     modelServer: 'fastapi',
@@ -219,6 +224,7 @@ describe.skip('CodeBuild Integration Tests', function() {
             runContext = await helpers.run(path.join(__dirname, '../../generators/app'))
                 .inDir(path.join(__dirname, '../../.kiro/project-testing'))
                 .withArguments(['test-no-sagemaker-files'])
+                .withOptions({'project-dir': '.'})  // Generate in test directory root
                 .withPrompts({
                     framework: 'tensorflow',
                     modelServer: 'flask',
@@ -259,6 +265,7 @@ describe.skip('CodeBuild Integration Tests', function() {
                 runContext = await helpers.run(path.join(__dirname, '../../generators/app'))
                     .inDir(path.join(__dirname, '../../.kiro/project-testing'))
                     .withArguments([testName])
+                    .withOptions({'project-dir': '.'})  // Generate in test directory root
                     .withPrompts({
                         framework: config.framework,
                         modelServer: config.modelServer,
@@ -301,6 +308,7 @@ describe.skip('CodeBuild Integration Tests', function() {
             runContext = await helpers.run(path.join(__dirname, '../../generators/app'))
                 .inDir(path.join(__dirname, '../../.kiro/project-testing'))
                 .withArguments(['test-permissions'])
+                .withOptions({'project-dir': '.'})  // Generate in test directory root
                 .withPrompts({
                     framework: 'sklearn',
                     modelServer: 'flask',
@@ -326,6 +334,7 @@ describe.skip('CodeBuild Integration Tests', function() {
             runContext = await helpers.run(path.join(__dirname, '../../generators/app'))
                 .inDir(path.join(__dirname, '../../.kiro/project-testing'))
                 .withArguments(['test-valid-name'])
+                .withOptions({'project-dir': '.'})  // Generate in test directory root
                 .withPrompts({
                     framework: 'sklearn',
                     modelServer: 'flask',
@@ -356,6 +365,7 @@ describe.skip('CodeBuild Integration Tests', function() {
             const codebuildContext = await helpers.run(path.join(__dirname, '../../generators/app'))
                 .inDir(path.join(__dirname, '../../.kiro/project-testing'))
                 .withArguments(['test-codebuild-exclusion'])
+                .withOptions({'project-dir': '.'})  // Generate in test directory root
                 .withPrompts({
                     framework: 'sklearn',
                     modelServer: 'flask',
@@ -392,6 +402,7 @@ describe.skip('CodeBuild Integration Tests', function() {
             const sagemakerContext = await helpers.run(path.join(__dirname, '../../generators/app'))
                 .inDir(path.join(__dirname, '../../.kiro/project-testing'))
                 .withArguments(['test-sagemaker-exclusion'])
+                .withOptions({'project-dir': '.'})  // Generate in test directory root
                 .withPrompts({
                     framework: 'sklearn',
                     modelServer: 'flask',

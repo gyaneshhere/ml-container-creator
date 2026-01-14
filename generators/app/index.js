@@ -222,8 +222,9 @@ export default class extends Generator {
                     console.log(`   • ${error}`);
                 });
                 console.log('\nPlease provide the missing required parameters and try again.');
-                this.env.error('Required parameters are missing. Cannot proceed with file generation.');
-                return;
+                const errorMessage = 'Required parameters are missing. Cannot proceed with file generation.';
+                this.env.error(errorMessage);
+                throw new Error(errorMessage); // Throw so tests can catch it
             }
         }
 

@@ -70,6 +70,7 @@ describe('Property Test: Test Suite Integration', function() {
                 // Generate project with CodeBuild configuration
                 runContext = await helpers.run(path.join(__dirname, '../../generators/app'))
                     .withArguments([config.projectName])
+                    .withOptions({'project-dir': '.'})  // Generate in test directory root
                     .withPrompts({
                         framework: config.framework,
                         modelServer: config.modelServer,
@@ -172,6 +173,7 @@ describe('Property Test: Test Suite Integration', function() {
                 // Generate project with SageMaker configuration
                 runContext = await helpers.run(path.join(__dirname, '../../generators/app'))
                     .withArguments([config.projectName])
+                    .withOptions({'project-dir': '.'})  // Generate in test directory root
                     .withPrompts({
                         framework: config.framework,
                         modelServer: config.modelServer,
@@ -277,6 +279,7 @@ describe('Property Test: Test Suite Integration', function() {
                 // Generate project with configuration
                 runContext = await helpers.run(path.join(__dirname, '../../generators/app'))
                     .withArguments([config.projectName])
+                    .withOptions({'project-dir': '.'})  // Generate in test directory root
                     .withPrompts({
                         framework: config.framework,
                         modelServer: config.modelServer,
