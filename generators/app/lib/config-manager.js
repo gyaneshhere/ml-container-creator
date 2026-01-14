@@ -183,15 +183,24 @@ export default class ConfigManager {
             finalConfig.includeSampleModel = false;
         }
         
-        // Set destinationDir based on projectName if not explicitly provided
-        // Only do this if destinationDir is still the default value '.'
-        if (finalConfig.destinationDir === '.' && finalConfig.projectName) {
-            // Check if destinationDir was explicitly set via CLI or config
-            const explicitDestination = explicitConfig.destinationDir;
-            if (!explicitDestination) {
-                // User didn't explicitly set destination, so use projectName as directory
-                finalConfig.destinationDir = `./${finalConfig.projectName}`;
-            }
+        // Set destinationDir based on projectName if not explicitly provided via --project-dir
+        // This matches standard Yeoman behavior:
+        // - `yo generator my-app` creates `./my-app/` subdirectory
+        // - `yo generator my-app --project-dir /tmp` uses `/tmp/` directly
+        // - `yo generator --project-name my-app` uses current directory (option, not argument)
+        //
+        // Only create subdirectory when:
+        // 1. Project name was provided as a positional CLI argument (not option/config)
+        // 2. --project-dir was NOT explicitly provided
+        // 3. destinationDir is still the default '.'
+        
+        const projectNameFromArgument = this.projectNameFromArgument || false;
+        const explicitDestination = explicitConfig.destinationDir;
+        
+        if (projectNameFromArgument && 
+            !explicitDestination && 
+            finalConfig.destinationDir === '.') {
+            finalConfig.destinationDir = `./${finalConfig.projectName}`;
         }
         
         // Generate CodeBuild project name if deployTarget is codebuild
@@ -582,6 +591,8 @@ export default class ConfigManager {
                 this.explicitConfig = {};
             }
             this.explicitConfig.projectName = this.generator.args[0];
+            // Track that project name came from positional argument (for subdirectory creation)
+            this.projectNameFromArgument = true;
         }
     }
 
