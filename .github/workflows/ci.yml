@@ -90,11 +90,11 @@ jobs:
             --model-format=pkl \
             --skip-prompts
           
-          # Verify expected files were created
-          test -f Dockerfile
-          test -f requirements.txt
-          test -f code/model_handler.py
-          test -f code/serve.py
+          # Verify expected files were created in test-project subdirectory
+          test -f test-project/Dockerfile
+          test -f test-project/requirements.txt
+          test -f test-project/code/model_handler.py
+          test -f test-project/code/serve.py
           
           echo "✅ Generator CLI test passed"
 
