@@ -270,7 +270,7 @@ yo ml-container-creator
 ? HuggingFace token (enter token, "$HF_TOKEN" for env var, or leave empty): hf_abc123...
 ```
 
-For more information on HuggingFace authentication, see the [HuggingFace Authentication section](../README.md#-huggingface-authentication) in the main README.
+For more information on HuggingFace authentication, see the [HuggingFace Authentication section](configuration.md#huggingface-authentication) in the Configuration Guide.
 
 ### Step 2: Prepare Model Files
 
