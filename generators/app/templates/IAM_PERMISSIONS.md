@@ -323,6 +323,183 @@ Consider creating separate roles for different environments:
 - `<%= codebuildProjectName %>-dev-service-role`
 - `<%= codebuildProjectName %>-prod-service-role`
 
+<% if (framework === 'transformers' && hfToken) { %>
+## HuggingFace Token Security
+
+This project includes a HuggingFace authentication token baked into the Docker image. Follow these security best practices to protect your token:
+
+### ECR Access Restrictions
+
+**Restrict who can pull images from your ECR repository:**
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RestrictECRAccess",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": [
+          "arn:aws:iam::YOUR_ACCOUNT_ID:role/<%= projectName %>-sagemaker-role",
+          "arn:aws:iam::YOUR_ACCOUNT_ID:user/trusted-user"
+        ]
+      },
+      "Action": [
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage",
+        "ecr:BatchCheckLayerAvailability"
+      ]
+    }
+  ]
+}
+```
+
+Apply this policy to your ECR repository:
+```bash
+aws ecr set-repository-policy \
+  --repository-name ml-container-creator \
+  --policy-text file://ecr-policy.json
+```
+
+### Use Private ECR Repositories
+
+Ensure your ECR repository is private (not public):
+```bash
+# Verify repository is private
+aws ecr describe-repositories \
+  --repository-names ml-container-creator \
+  --query 'repositories[0].repositoryUri'
+
+# If public, delete and recreate as private
+aws ecr delete-repository --repository-name ml-container-creator --force
+aws ecr create-repository --repository-name ml-container-creator
+```
+
+### Token Rotation Practices
+
+**Rotate your HuggingFace tokens regularly:**
+
+1. **Generate a new token** on HuggingFace:
+   - Go to https://huggingface.co/settings/tokens
+   - Create a new token with read-only access
+   - Copy the new token
+
+2. **Rebuild the container** with the new token:
+   ```bash
+   # Update token in your configuration or environment
+   export HF_TOKEN=hf_new_token_here
+   
+   # Rebuild and push
+   ./deploy/submit_build.sh
+   ```
+
+3. **Revoke the old token** on HuggingFace:
+   - Go to https://huggingface.co/settings/tokens
+   - Delete the old token
+
+4. **Update SageMaker endpoint** with new image:
+   ```bash
+   ./deploy/deploy.sh YOUR_SAGEMAKER_ROLE_ARN
+   ```
+
+**Recommended rotation schedule:**
+- Development environments: Every 90 days
+- Production environments: Every 30-60 days
+- Immediately if token is compromised
+
+### Audit Image Access
+
+**Enable CloudTrail logging for ECR operations:**
+
+```bash
+# Create CloudTrail trail if not exists
+aws cloudtrail create-trail \
+  --name ecr-audit-trail \
+  --s3-bucket-name your-cloudtrail-bucket
+
+# Enable logging for ECR events
+aws cloudtrail put-event-selectors \
+  --trail-name ecr-audit-trail \
+  --event-selectors '[{
+    "ReadWriteType": "All",
+    "IncludeManagementEvents": true,
+    "DataResources": [{
+      "Type": "AWS::ECR::Repository",
+      "Values": ["arn:aws:ecr:<%= awsRegion %>:*:repository/ml-container-creator"]
+    }]
+  }]'
+```
+
+**Monitor for suspicious access:**
+- Review CloudTrail logs regularly
+- Set up CloudWatch alarms for unusual ECR pull patterns
+- Monitor for access from unexpected IP addresses or regions
+
+### Alternative: Environment Variable Approach
+
+For enhanced security, consider using environment variables at runtime instead of baking tokens into images:
+
+**Pros:**
+- Token not visible in image layers
+- Easier token rotation (no rebuild required)
+- Better separation of secrets from code
+
+**Cons:**
+- Requires SageMaker environment variable configuration
+- More complex deployment process
+
+**Implementation:**
+1. Remove token from image build
+2. Configure SageMaker endpoint with environment variable:
+   ```bash
+   aws sagemaker create-model \
+     --model-name <%= projectName %> \
+     --primary-container '{
+       "Image": "YOUR_ECR_IMAGE_URI",
+       "Environment": {
+         "HF_TOKEN": "hf_your_token_here"
+       }
+     }' \
+     --execution-role-arn YOUR_SAGEMAKER_ROLE_ARN
+   ```
+
+### Token Scope Limitations
+
+**Use read-only tokens with minimal scope:**
+
+1. **Create a dedicated token** for this deployment:
+   - Name it clearly (e.g., "sagemaker-<%= projectName %>")
+   - Set to "Read" access only
+   - Limit to specific organizations if possible
+
+2. **Never use write tokens** in production containers
+
+3. **Document token purpose** in your HuggingFace account
+
+### Incident Response
+
+**If your token is compromised:**
+
+1. **Immediately revoke the token** on HuggingFace
+2. **Delete the compromised image** from ECR:
+   ```bash
+   aws ecr batch-delete-image \
+     --repository-name ml-container-creator \
+     --image-ids imageTag=<%= projectName %>-latest
+   ```
+3. **Generate a new token** and rebuild
+4. **Review CloudTrail logs** for unauthorized access
+5. **Update all deployments** with the new image
+
+### Compliance Considerations
+
+- **Data residency**: Ensure ECR repository is in compliant region
+- **Access logging**: Enable CloudTrail for audit requirements
+- **Encryption**: ECR images are encrypted at rest by default
+- **Network isolation**: Consider VPC endpoints for ECR access
+
+<% } %>
 ## Troubleshooting
 
 ### Common Permission Issues

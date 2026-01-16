@@ -112,6 +112,79 @@ const modelServerPrompts = [
 ];
 
 /**
+ * List of example model IDs that don't require HF_TOKEN prompts
+ * These are public models that don't need authentication
+ */
+const EXAMPLE_MODEL_IDS = [
+    'openai/gpt-oss-20b',
+    'meta-llama/Llama-3.2-3B-Instruct',
+    'meta-llama/Llama-3.2-1B-Instruct'
+];
+
+/**
+ * HuggingFace token prompts for transformer models
+ */
+const hfTokenPrompts = [
+    {
+        type: 'input',
+        name: 'hfToken',
+        message: 'HuggingFace token (enter token, "$HF_TOKEN" for env var, or leave empty):',
+        when: (answers) => {
+            // Only prompt when:
+            // 1. Framework is transformers
+            // 2. User manually entered a model ID (not from examples)
+            const isTransformers = answers.framework === 'transformers';
+            
+            // Check if user selected custom model entry
+            const isManualEntry = answers.modelName === 'Custom (enter manually)';
+            
+            // If manual entry, we need to check the customModelName
+            // If it matches an example model (case-insensitive), skip prompt
+            if (isTransformers && isManualEntry && answers.customModelName) {
+                const customModel = answers.customModelName.toLowerCase();
+                const isExampleModel = EXAMPLE_MODEL_IDS.some(
+                    exampleId => exampleId.toLowerCase() === customModel
+                );
+                
+                if (isExampleModel) {
+                    return false; // Skip prompt for example models
+                }
+                
+                // Display security warning before prompting
+                console.log('\n🔐 HuggingFace Authentication');
+                console.log('⚠️  Security Note: The token will be baked into the Docker image.');
+                console.log('   Anyone with access to the image can extract the token using \'docker inspect\'.');
+                console.log('   For CI/CD pipelines, use "$HF_TOKEN" to reference an environment variable.');
+                console.log('   This keeps the token out of the image and allows rotation without rebuilding.\n');
+                
+                return true; // Show prompt for custom models
+            }
+            
+            return false; // Skip prompt for non-transformers or example models
+        },
+        validate: (input) => {
+            // Empty is valid (not all models require auth)
+            if (!input || input.trim() === '') {
+                return true;
+            }
+            
+            // $HF_TOKEN reference is valid
+            if (input.trim() === '$HF_TOKEN') {
+                return true;
+            }
+            
+            // Direct token should start with hf_ (warning only, not blocking)
+            if (!input.startsWith('hf_')) {
+                console.warn('\n⚠️  Warning: HuggingFace tokens typically start with "hf_"');
+                console.warn('   If this is intentional, you can ignore this warning.');
+            }
+            
+            return true; // Always return true (non-blocking validation)
+        }
+    }
+];
+
+/**
  * Phase 2: Optional modules
  */
 const modulePrompts = [
@@ -261,6 +334,7 @@ export {
     frameworkPrompts,
     modelFormatPrompts,
     modelServerPrompts,
+    hfTokenPrompts,
     modulePrompts,
     infrastructurePrompts,
     projectPrompts,
