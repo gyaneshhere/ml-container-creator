@@ -90,6 +90,11 @@ FROM ${BASE_IMAGE}
 # Set the model name for the transformer model
 ENV OPTION_MODEL="<%= modelName %>"
 
+<% if (hfToken) { %>
+# Set HuggingFace authentication token
+ENV HF_TOKEN="<%= hfToken %>"
+<% } %>
+
 COPY code/serve /usr/bin/serve
 RUN chmod 777 /usr/bin/serve
 

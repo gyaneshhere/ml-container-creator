@@ -230,6 +230,48 @@ You want to deploy a Llama 2 7B model using vLLM for efficient inference.
 - Test types: `hosted-model-endpoint` (only option)
 - Instance type: `gpu-enabled` (required)
 
+### Example Model IDs
+
+When generating a transformer project, you'll be prompted to select a model. The generator provides several example models that **do not require HuggingFace authentication**:
+
+**Available Example Models:**
+- `openai/gpt-oss-20b` - Open-source GPT model (no authentication required)
+- `meta-llama/Llama-3.2-3B-Instruct` - Llama 3.2 3B instruction-tuned model
+- `meta-llama/Llama-3.2-1B-Instruct` - Llama 3.2 1B instruction-tuned model
+- `Custom (enter manually)` - Enter any model ID manually
+
+**Important Notes:**
+
+1. **Example models skip authentication prompts**: If you select one of the pre-configured example models, you will NOT be prompted for a HuggingFace token. These models are publicly accessible.
+
+2. **Custom models may require authentication**: If you select "Custom (enter manually)" and enter a model ID for a private or gated model (like `meta-llama/Llama-2-7b-hf`), you will be prompted for your HuggingFace token.
+
+3. **Case-insensitive matching**: Model ID matching is case-insensitive. For example, `OPENAI/GPT-OSS-20B` will be recognized as an example model.
+
+4. **When to use custom models**:
+   - Private models in your HuggingFace account
+   - Gated models requiring license agreement (e.g., Llama 2)
+   - Models not in the example list
+   - Fine-tuned models
+
+**Example: Using a Custom Model with Authentication**
+
+```bash
+yo ml-container-creator
+
+# When prompted:
+? Which model do you want to use? Custom (enter manually)
+? Enter the model name: meta-llama/Llama-2-7b-hf
+
+🔐 HuggingFace Authentication
+⚠️  Security Note: The token will be baked into the Docker image.
+   For CI/CD, consider using "$HF_TOKEN" to reference an environment variable.
+
+? HuggingFace token (enter token, "$HF_TOKEN" for env var, or leave empty): hf_abc123...
+```
+
+For more information on HuggingFace authentication, see the [HuggingFace Authentication section](../README.md#-huggingface-authentication) in the main README.
+
 ### Step 2: Prepare Model Files
 
 Option A: Download from Hugging Face Hub

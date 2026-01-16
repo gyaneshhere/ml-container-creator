@@ -216,6 +216,12 @@ export default class ConfigManager {
             finalConfig.buildTimestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
         }
 
+        // Resolve HF_TOKEN environment variable references
+        // This happens after all configuration sources have been merged
+        if (finalConfig.hfToken) {
+            finalConfig.hfToken = this._resolveHfToken(finalConfig.hfToken);
+        }
+
         return finalConfig;
     }
 
@@ -383,6 +389,15 @@ export default class ConfigManager {
                 configFile: true,
                 packageJson: false,
                 promptable: false,
+                required: false,
+                default: null
+            },
+            hfToken: {
+                cliOption: 'hf-token',
+                envVar: null,
+                configFile: true,
+                packageJson: false,
+                promptable: true,
                 required: false,
                 default: null
             }
@@ -1045,6 +1060,32 @@ export default class ConfigManager {
             }
             break;
         }
+    }
+
+    /**
+     * Resolves HF_TOKEN references to actual token values
+     * @param {string} tokenValue - The token value or "$HF_TOKEN" reference
+     * @returns {string|null} Resolved token value
+     * @private
+     */
+    _resolveHfToken(tokenValue) {
+        if (!tokenValue || tokenValue.trim() === '') {
+            return null;
+        }
+        
+        // Check if it's an environment variable reference
+        if (tokenValue.trim() === '$HF_TOKEN') {
+            const envToken = process.env.HF_TOKEN;
+            if (!envToken) {
+                console.warn('⚠️  Warning: $HF_TOKEN specified but HF_TOKEN environment variable is not set');
+                console.warn('   The container will be built without authentication.');
+                return null;
+            }
+            return envToken;
+        }
+        
+        // Direct token value
+        return tokenValue;
     }
 
     /**

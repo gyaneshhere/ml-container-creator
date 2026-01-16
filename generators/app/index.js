@@ -119,6 +119,11 @@ export default class extends Generator {
             type: String,
             description: 'AWS IAM role ARN for SageMaker execution'
         });
+
+        this.option('hf-token', {
+            type: String,
+            description: 'HuggingFace authentication token (or "$HF_TOKEN" to use environment variable)'
+        });
     }
 
     /**
@@ -163,6 +168,11 @@ export default class extends Generator {
             }
             if (this.baseConfig.framework) {
                 console.log(`   • Framework: ${this.baseConfig.framework}`);
+            }
+            if (this.baseConfig.hfToken) {
+                // Mask token value, only show reference
+                const tokenDisplay = this.baseConfig.hfToken === '$HF_TOKEN' ? '$HF_TOKEN' : '***';
+                console.log(`   • HuggingFace token: ${tokenDisplay}`);
             }
             if (Object.keys(this.baseConfig).filter(k => this.baseConfig[k] !== null && k !== 'projectName').length === 0) {
                 console.log('   • No external configuration found');

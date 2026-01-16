@@ -347,6 +347,228 @@ docker build -t my-model .
 docker run my-model pip list | grep xgboost
 ```
 
+## HuggingFace Authentication Issues
+
+### Token Not Working
+
+**Problem:**
+Container fails to download model with authentication error:
+```bash
+Error: Repository not found or access denied
+```
+
+**Solutions:**
+
+1. **Verify token is valid**:
+   ```bash
+   # Test token with HuggingFace CLI
+   pip install huggingface-hub
+   huggingface-cli login
+   # Enter your token when prompted
+   
+   # Try downloading the model
+   huggingface-cli download meta-llama/Llama-2-7b-hf
+   ```
+
+2. **Check token permissions**:
+   - Go to https://huggingface.co/settings/tokens
+   - Verify token has "Read" access
+   - Ensure token is not expired
+
+3. **Accept model license**:
+   - Visit the model page on HuggingFace (e.g., https://huggingface.co/meta-llama/Llama-2-7b-hf)
+   - Click "Agree and access repository"
+   - Accept the license terms
+
+4. **Rebuild image**:
+   Token changes require rebuilding the Docker image:
+   ```bash
+   docker build -t my-model .
+   ```
+
+### Environment Variable Not Resolved
+
+**Problem:**
+Warning during generation:
+```bash
+⚠️  Warning: $HF_TOKEN specified but HF_TOKEN environment variable is not set
+```
+
+**Solutions:**
+
+1. **Set the environment variable**:
+   ```bash
+   export HF_TOKEN=hf_your_token_here
+   
+   # Verify it's set
+   echo $HF_TOKEN
+   ```
+
+2. **Check variable name** (case-sensitive):
+   ```bash
+   # Must be exactly HF_TOKEN, not hf_token or Hf_Token
+   export HF_TOKEN=hf_abc123...
+   ```
+
+3. **Verify in current shell**:
+   ```bash
+   # Check all environment variables
+   env | grep HF_TOKEN
+   
+   # If not found, set it again
+   export HF_TOKEN=hf_your_token_here
+   ```
+
+4. **Make it persistent** (optional):
+   ```bash
+   # Add to your shell profile (~/.bashrc, ~/.zshrc, etc.)
+   echo 'export HF_TOKEN=hf_your_token_here' >> ~/.bashrc
+   source ~/.bashrc
+   ```
+
+### Token Format Warning
+
+**Problem:**
+Warning during generation:
+```bash
+⚠️  Warning: HuggingFace tokens typically start with "hf_"
+```
+
+**Solutions:**
+
+1. **Verify token format**:
+   - HuggingFace tokens should start with `hf_`
+   - Example: `hf_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890`
+
+2. **Get a new token**:
+   - Go to https://huggingface.co/settings/tokens
+   - Click "New token"
+   - Copy the token (it will start with `hf_`)
+
+3. **If using a valid token**:
+   - The warning is non-blocking
+   - If your token works, you can ignore the warning
+   - The generator will continue with your provided token
+
+### Container Builds But Fails at Runtime
+
+**Problem:**
+Container builds successfully but fails when trying to load the model:
+```bash
+Error: Failed to download model from HuggingFace Hub
+```
+
+**Solutions:**
+
+1. **Token not provided**:
+   The model requires authentication but no token was provided during generation.
+   
+   Rebuild with token:
+   ```bash
+   yo ml-container-creator my-llm-project \
+     --framework=transformers \
+     --model-name=meta-llama/Llama-2-7b-hf \
+     --model-server=vllm \
+     --hf-token=hf_your_token_here \
+     --skip-prompts
+   ```
+
+2. **Token expired**:
+   Generate a new token and rebuild:
+   ```bash
+   # Get new token from https://huggingface.co/settings/tokens
+   docker build -t my-model . --build-arg HF_TOKEN=hf_new_token
+   ```
+
+3. **Model requires agreement**:
+   - Visit the model page on HuggingFace
+   - Accept the license agreement
+   - Wait a few minutes for access to be granted
+   - Rebuild the container
+
+### Token Visible in Docker Image
+
+**Problem:**
+Concerned about token security in Docker image
+
+**Solutions:**
+
+1. **Use environment variable reference** (recommended for CI/CD):
+   ```bash
+   # During generation, use $HF_TOKEN reference
+   yo ml-container-creator --hf-token='$HF_TOKEN' --skip-prompts
+   
+   # Set environment variable before building
+   export HF_TOKEN=hf_your_token_here
+   ```
+
+2. **Restrict image access**:
+   ```bash
+   # Use private ECR repository
+   aws ecr create-repository --repository-name my-private-models
+   
+   # Set repository policy to restrict access
+   aws ecr set-repository-policy \
+     --repository-name my-private-models \
+     --policy-text file://policy.json
+   ```
+
+3. **Rotate tokens regularly**:
+   - Generate new tokens periodically
+   - Revoke old tokens
+   - Rebuild images with new tokens
+
+4. **Use read-only tokens**:
+   - Create tokens with minimal permissions
+   - Only grant "Read" access
+   - Limit scope to specific models/organizations
+
+### Model Access Denied
+
+**Problem:**
+```bash
+Error: You don't have permission to access this model
+```
+
+**Solutions:**
+
+1. **Check organization membership**:
+   - Some models require organization membership
+   - Contact the model owner for access
+
+2. **Verify token scope**:
+   - Token may not have access to the specific model
+   - Create a new token with appropriate permissions
+
+3. **Check model visibility**:
+   - Model may be private or restricted
+   - Verify you have access on HuggingFace website
+
+### Rate Limiting Issues
+
+**Problem:**
+```bash
+Error: Rate limit exceeded
+```
+
+**Solutions:**
+
+1. **Use authentication**:
+   Authenticated requests have higher rate limits:
+   ```bash
+   yo ml-container-creator --hf-token=hf_your_token_here --skip-prompts
+   ```
+
+2. **Wait and retry**:
+   - Rate limits reset after a period
+   - Wait a few minutes and try again
+
+3. **Use cached models**:
+   - Download model once and cache it
+   - Upload to S3 and reference in SageMaker
+
+For more information on HuggingFace authentication, see the [README](./README.md#-huggingface-authentication).
+
 ## Performance Issues
 
 ### Slow Predictions

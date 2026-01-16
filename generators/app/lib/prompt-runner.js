@@ -12,6 +12,7 @@ import {
     frameworkPrompts,
     modelFormatPrompts,
     modelServerPrompts,
+    hfTokenPrompts,
     modulePrompts,
     infrastructurePrompts,
     projectPrompts,
@@ -42,6 +43,9 @@ export default class PromptRunner {
         const frameworkAnswers = await this._runPhase(frameworkPrompts, {}, explicitConfig, existingConfig);
         const modelFormatAnswers = await this._runPhase(modelFormatPrompts, frameworkAnswers, explicitConfig, existingConfig);
         const modelServerAnswers = await this._runPhase(modelServerPrompts, frameworkAnswers, explicitConfig, existingConfig);
+        const hfTokenAnswers = await this._runPhase(hfTokenPrompts, 
+            { ...frameworkAnswers, ...modelFormatAnswers, ...modelServerAnswers }, 
+            explicitConfig, existingConfig);
 
         // Phase 2: Module Selection
         console.log('\n📦 Module Selection');
@@ -77,6 +81,7 @@ export default class PromptRunner {
             ...frameworkAnswers,
             ...modelFormatAnswers,
             ...modelServerAnswers,
+            ...hfTokenAnswers,
             ...moduleAnswers,
             ...infraAnswers,
             ...projectAnswers,

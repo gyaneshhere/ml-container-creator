@@ -194,6 +194,7 @@ yo ml-container-creator --config=production.json --skip-prompts
 | `--region=<region>` | AWS region | `us-east-1`, etc. |
 | `--role-arn=<arn>` | AWS IAM role ARN | `arn:aws:iam::123456789012:role/SageMakerRole` |
 | `--project-dir=<dir>` | Output directory path | `./my-project` |
+| `--hf-token=<token>` | HuggingFace authentication token | `hf_abc123...` or `$HF_TOKEN` |
 
 ### Environment Variables Reference
 
@@ -269,6 +270,111 @@ yo ml-container-creator --config=production.json --skip-prompts
 4. **Deploy**: 
    - **SageMaker**: Run `./deploy/deploy.sh your-sagemaker-role-arn`
    - **CodeBuild**: Run `./deploy/submit_build.sh` then `./deploy/deploy.sh your-sagemaker-role-arn`
+
+## 🔐 HuggingFace Authentication
+
+### When is Authentication Needed?
+
+HuggingFace authentication is required for:
+- **Private models**: Models in private repositories
+- **Gated models**: Models requiring user agreement (e.g., Llama 2, Llama 3)
+- **Rate-limited access**: Avoiding rate limits on public models
+
+Public models like `openai/gpt-oss-20b` do not require authentication.
+
+### Providing Your HF_TOKEN
+
+When you manually enter a transformer model ID (not selecting from examples), you'll be prompted for authentication:
+
+#### Option 1: Interactive Prompt (Recommended for Local Development)
+
+```
+🔐 HuggingFace Authentication
+⚠️  Security Note: The token will be baked into the Docker image.
+   For CI/CD, consider using "$HF_TOKEN" to reference an environment variable.
+
+? HuggingFace token (enter token, "$HF_TOKEN" for env var, or leave empty):
+```
+
+You can:
+- **Enter your token directly**: `hf_abc123...`
+- **Reference an environment variable**: `$HF_TOKEN`
+- **Leave empty for public models**: (press Enter)
+
+#### Option 2: CLI Option
+
+```bash
+# Direct token
+yo ml-container-creator my-llm-project \
+  --framework=transformers \
+  --model-name=meta-llama/Llama-2-7b-hf \
+  --model-server=vllm \
+  --hf-token=hf_abc123... \
+  --skip-prompts
+
+# Environment variable reference
+yo ml-container-creator my-llm-project \
+  --framework=transformers \
+  --model-name=meta-llama/Llama-2-7b-hf \
+  --model-server=vllm \
+  --hf-token='$HF_TOKEN' \
+  --skip-prompts
+```
+
+#### Option 3: Configuration File
+
+```json
+{
+  "framework": "transformers",
+  "modelName": "meta-llama/Llama-2-7b-hf",
+  "modelServer": "vllm",
+  "hfToken": "$HF_TOKEN"
+}
+```
+
+### Security Best Practices
+
+⚠️ **Important Security Considerations:**
+
+1. **Tokens are baked into the image**: Anyone with access to your Docker image can extract the token using `docker inspect`.
+
+2. **Use environment variable references for CI/CD**:
+   ```bash
+   export HF_TOKEN=hf_your_token_here
+   yo ml-container-creator --framework=transformers --hf-token='$HF_TOKEN' --skip-prompts
+   ```
+
+3. **Never commit tokens to version control**: Use `$HF_TOKEN` in config files, not actual tokens.
+
+4. **Rotate tokens regularly**: Generate new tokens periodically from your HuggingFace account.
+
+5. **Use read-only tokens**: Create tokens with minimal permissions (read-only access to specific models).
+
+### Getting Your HF_TOKEN
+
+1. Go to https://huggingface.co/settings/tokens
+2. Click "New token"
+3. Give it a descriptive name (e.g., "sagemaker-deployment")
+4. Select "Read" access
+5. Copy the token (starts with `hf_`)
+
+### Troubleshooting Authentication
+
+**Error: "Repository not found" or "Access denied"**
+- Verify your token is valid and not expired
+- Ensure you've accepted the model's license agreement on HuggingFace
+- Check that your token has access to the model's organization
+
+**Error: "HF_TOKEN environment variable not set"**
+- You specified `$HF_TOKEN` but the environment variable is not set
+- Set it: `export HF_TOKEN=hf_your_token_here`
+- Or provide the token directly instead of using `$HF_TOKEN`
+
+**Container builds but fails at runtime**
+- The model requires authentication but no token was provided
+- Rebuild with `--hf-token` option
+
+For more authentication troubleshooting, see the [Troubleshooting Guide](./TROUBLESHOOTING.md#huggingface-authentication-issues).
 
 ## 🛠️ Requirements
 
