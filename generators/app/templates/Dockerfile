@@ -88,7 +88,11 @@ ARG BASE_IMAGE=lmsysorg/sglang:v0.5.4.post1
 FROM ${BASE_IMAGE}
 
 # Set the model name for the transformer model
-ENV OPTION_MODEL="<%= modelName %>"
+<% if (modelServer === 'vllm') { %>
+ENV VLLM_MODEL="<%= modelName %>"
+<% } else if (modelServer === 'sglang') { %>
+ENV SGLANG_MODEL_PATH="<%= modelName %>"
+<% } %>
 
 <% if (hfToken) { %>
 # Set HuggingFace authentication token

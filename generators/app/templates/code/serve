@@ -12,12 +12,33 @@ SERVER_ARGS=(--host 0.0.0.0 --port 8080)
 PREFIX="<%= modelServer === 'vllm' ? 'VLLM_' : 'SGLANG_' %>"
 ARG_PREFIX="--"
 
+# Define environment variables to exclude (internal variables set by base images)
+<% if (modelServer === 'vllm') { %>
+EXCLUDE_VARS=("VLLM_USAGE_SOURCE")
+<% } else { %>
+EXCLUDE_VARS=()
+<% } %>
+
 # Declare and populate array of matching environment variables
 mapfile -t env_vars < <(env | grep "^${PREFIX}")
 
 # Loop through the array and convert to command-line arguments
 for var in "${env_vars[@]}"; do
     IFS='=' read -r key value <<< "$var"
+    
+    # Skip excluded variables
+    skip=false
+    for exclude in "${EXCLUDE_VARS[@]}"; do
+        if [ "$key" = "$exclude" ]; then
+            skip=true
+            break
+        fi
+    done
+    
+    if [ "$skip" = true ]; then
+        continue
+    fi
+    
     # Remove prefix, convert to lowercase, and replace underscores with dashes
     arg_name=$(echo "${key#"${PREFIX}"}" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
     SERVER_ARGS+=("${ARG_PREFIX}${arg_name}")
