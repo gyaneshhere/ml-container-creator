@@ -78,11 +78,11 @@ describe('HuggingFace Token Dockerfile Template - Property-Based Tests', () => {
             console.log('  ✅ Property 7 validated: ENV HF_TOKEN injection working correctly for all non-empty tokens');
         });
 
-        it('should place ENV HF_TOKEN after OPTION_MODEL and before COPY', async function() {
+        it('should place ENV HF_TOKEN after VLLM_MODEL and before COPY', async function() {
             this.timeout(10000);
             
             console.log('\n  🧪 Property 7b: ENV Directive Placement');
-            console.log('  📝 For any token value, ENV HF_TOKEN should appear after ENV OPTION_MODEL and before COPY command');
+            console.log('  📝 For any token value, ENV HF_TOKEN should appear after ENV VLLM_MODEL and before COPY command');
             console.log('  📝 Validates: Requirements 4.4');
             
             // Feature: huggingface-token-authentication, Property 7: Dockerfile ENV Injection (placement)
@@ -110,13 +110,13 @@ describe('HuggingFace Token Dockerfile Template - Property-Based Tests', () => {
                         const dockerfileContent = fs.readFileSync(dockerfilePath, 'utf8');
                         
                         // Find positions of key directives
-                        const optionModelPos = dockerfileContent.indexOf('ENV OPTION_MODEL=');
+                        const vllmModelPos = dockerfileContent.indexOf('ENV VLLM_MODEL=');
                         const hfTokenPos = dockerfileContent.indexOf('ENV HF_TOKEN=');
                         const copyPos = dockerfileContent.indexOf('COPY code/serve');
                         
                         // Verify all directives exist
-                        if (optionModelPos === -1) {
-                            console.log('    ❌ ENV OPTION_MODEL not found');
+                        if (vllmModelPos === -1) {
+                            console.log('    ❌ ENV VLLM_MODEL not found');
                             return false;
                         }
                         if (hfTokenPos === -1) {
@@ -128,9 +128,9 @@ describe('HuggingFace Token Dockerfile Template - Property-Based Tests', () => {
                             return false;
                         }
                         
-                        // Verify correct order: OPTION_MODEL < HF_TOKEN < COPY
-                        if (!(optionModelPos < hfTokenPos && hfTokenPos < copyPos)) {
-                            console.log(`    ❌ Incorrect directive order: OPTION_MODEL=${optionModelPos}, HF_TOKEN=${hfTokenPos}, COPY=${copyPos}`);
+                        // Verify correct order: VLLM_MODEL < HF_TOKEN < COPY
+                        if (!(vllmModelPos < hfTokenPos && hfTokenPos < copyPos)) {
+                            console.log(`    ❌ Incorrect directive order: VLLM_MODEL=${vllmModelPos}, HF_TOKEN=${hfTokenPos}, COPY=${copyPos}`);
                             return false;
                         }
                         
@@ -323,8 +323,11 @@ describe('HuggingFace Token Dockerfile Template - Property-Based Tests', () => {
                             console.log('    ❌ FROM directive missing');
                             return false;
                         }
-                        if (!dockerfileContent.includes('ENV OPTION_MODEL=')) {
-                            console.log('    ❌ ENV OPTION_MODEL missing');
+                        // Check for model server-specific ENV variable
+                        const hasVllmModel = dockerfileContent.includes('ENV VLLM_MODEL=');
+                        const hasSglangModel = dockerfileContent.includes('ENV SGLANG_MODEL_PATH=');
+                        if (!hasVllmModel && !hasSglangModel) {
+                            console.log('    ❌ ENV VLLM_MODEL or ENV SGLANG_MODEL_PATH missing');
                             return false;
                         }
                         if (!dockerfileContent.includes('COPY code/serve')) {

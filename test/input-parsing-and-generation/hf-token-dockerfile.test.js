@@ -24,7 +24,7 @@ describe('HuggingFace Token Dockerfile Template - Unit Tests', () => {
     setupTestHooks('HuggingFace Token Dockerfile Template Unit Tests');
 
     describe('ENV Directive Placement', () => {
-        it('should place ENV HF_TOKEN after OPTION_MODEL and before COPY', async function() {
+        it('should place ENV HF_TOKEN after VLLM_MODEL and before COPY', async function() {
             this.timeout(5000);
             
             console.log('\n  🧪 Testing ENV directive placement in Dockerfile');
@@ -51,17 +51,17 @@ describe('HuggingFace Token Dockerfile Template - Unit Tests', () => {
             const dockerfileContent = fs.readFileSync(dockerfilePath, 'utf8');
             
             // Find positions of key directives
-            const optionModelPos = dockerfileContent.indexOf('ENV OPTION_MODEL=');
+            const vllmModelPos = dockerfileContent.indexOf('ENV VLLM_MODEL=');
             const hfTokenPos = dockerfileContent.indexOf('ENV HF_TOKEN=');
             const copyPos = dockerfileContent.indexOf('COPY code/serve');
             
             // Verify all directives exist
-            assert.ok(optionModelPos !== -1, 'ENV OPTION_MODEL should exist');
+            assert.ok(vllmModelPos !== -1, 'ENV VLLM_MODEL should exist');
             assert.ok(hfTokenPos !== -1, 'ENV HF_TOKEN should exist');
             assert.ok(copyPos !== -1, 'COPY command should exist');
             
-            // Verify correct order: OPTION_MODEL < HF_TOKEN < COPY
-            assert.ok(optionModelPos < hfTokenPos, 'ENV OPTION_MODEL should come before ENV HF_TOKEN');
+            // Verify correct order: VLLM_MODEL < HF_TOKEN < COPY
+            assert.ok(vllmModelPos < hfTokenPos, 'ENV VLLM_MODEL should come before ENV HF_TOKEN');
             assert.ok(hfTokenPos < copyPos, 'ENV HF_TOKEN should come before COPY command');
             
             console.log('    ✅ ENV directive placement correct');
@@ -87,7 +87,7 @@ describe('HuggingFace Token Dockerfile Template - Unit Tests', () => {
             assert.fileContent('Dockerfile', /ENV HF_TOKEN=/);
             
             // Verify it's in the transformers section (after FROM)
-            assert.fileContent('Dockerfile', /FROM.*\n[\s\S]*ENV OPTION_MODEL=[\s\S]*ENV HF_TOKEN=/);
+            assert.fileContent('Dockerfile', /FROM.*\n[\s\S]*ENV VLLM_MODEL=[\s\S]*ENV HF_TOKEN=/);
             
             console.log('    ✅ ENV directive placement correct for vLLM');
         });
@@ -112,7 +112,7 @@ describe('HuggingFace Token Dockerfile Template - Unit Tests', () => {
             assert.fileContent('Dockerfile', /ENV HF_TOKEN=/);
             
             // Verify it's in the transformers section (after FROM)
-            assert.fileContent('Dockerfile', /FROM.*\n[\s\S]*ENV OPTION_MODEL=[\s\S]*ENV HF_TOKEN=/);
+            assert.fileContent('Dockerfile', /FROM.*\n[\s\S]*ENV SGLANG_MODEL_PATH=[\s\S]*ENV HF_TOKEN=/);
             
             console.log('    ✅ ENV directive placement correct for SGLang');
         });
@@ -149,7 +149,7 @@ describe('HuggingFace Token Dockerfile Template - Unit Tests', () => {
             assert.ok(dockerfileContent.includes('ENV HF_TOKEN='), 'ENV HF_TOKEN should be present');
             
             // Verify it's in the transformers section (check for transformers-specific markers)
-            assert.ok(dockerfileContent.includes('ENV OPTION_MODEL='), 'Should have OPTION_MODEL (transformers marker)');
+            assert.ok(dockerfileContent.includes('ENV VLLM_MODEL='), 'Should have VLLM_MODEL (transformers marker)');
             assert.ok(dockerfileContent.includes('COPY code/serve'), 'Should have serve script (transformers marker)');
             
             console.log('    ✅ ENV HF_TOKEN correctly in transformers section');

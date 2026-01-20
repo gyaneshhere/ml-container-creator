@@ -65,13 +65,13 @@ describe('HuggingFace Token Integration Tests', () => {
             assert.ok(dockerfileContent.includes(`ENV HF_TOKEN="${testToken}"`), 
                 'Dockerfile should contain ENV HF_TOKEN with CLI token value');
             
-            // Verify ENV is in correct location (after OPTION_MODEL, before COPY)
-            const optionModelPos = dockerfileContent.indexOf('ENV OPTION_MODEL=');
+            // Verify ENV is in correct location (after VLLM_MODEL, before COPY)
+            const vllmModelPos = dockerfileContent.indexOf('ENV VLLM_MODEL=');
             const hfTokenPos = dockerfileContent.indexOf('ENV HF_TOKEN=');
             const copyPos = dockerfileContent.indexOf('COPY code/serve');
             
-            assert.ok(optionModelPos < hfTokenPos && hfTokenPos < copyPos,
-                'ENV HF_TOKEN should be between OPTION_MODEL and COPY');
+            assert.ok(vllmModelPos < hfTokenPos && hfTokenPos < copyPos,
+                'ENV HF_TOKEN should be between VLLM_MODEL and COPY');
             
             console.log('    ✅ Complete project generated with CLI --hf-token');
         });
@@ -372,8 +372,8 @@ describe('HuggingFace Token Integration Tests', () => {
                 'Dockerfile should contain ENV HF_TOKEN');
             
             // Check other required directives
-            assert.ok(dockerfileContent.includes('ENV OPTION_MODEL='),
-                'Dockerfile should contain ENV OPTION_MODEL');
+            assert.ok(dockerfileContent.includes('ENV VLLM_MODEL='),
+                'Dockerfile should contain ENV VLLM_MODEL');
             assert.ok(dockerfileContent.includes('COPY code/serve'),
                 'Dockerfile should contain COPY code/serve');
             assert.ok(dockerfileContent.includes('ENTRYPOINT'),
