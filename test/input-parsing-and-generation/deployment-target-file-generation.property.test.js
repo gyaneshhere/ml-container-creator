@@ -240,7 +240,7 @@ describe('Deployment Target File Generation - Property-Based Tests', () => {
                         '**/code/model_handler.py',
                         '**/code/start_server.py',
                         '**/code/serve.py',
-                        '**/nginx.conf**',
+                        '**/nginx-predictors.conf',  // Traditional ML nginx config
                         '**/requirements.txt**',
                         '**/test/test_local_image.sh',
                         '**/test/test_model_handler.py'

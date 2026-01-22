@@ -161,7 +161,8 @@ Framework?
 project-name/
 ├── Dockerfile              ← Always included
 ├── requirements.txt        ← Excluded for transformers
-├── nginx.conf             ← Excluded for transformers
+├── nginx-predictors.conf   ← Excluded for transformers (traditional ML only)
+├── nginx-tensorrt.conf     ← Included only for TensorRT-LLM
 ├── code/
 │   ├── model_handler.py   ← Excluded for transformers
 │   ├── serve.py           ← Excluded for transformers
@@ -185,7 +186,7 @@ if (framework === 'transformers') {
     exclude: [
         'model_handler.py',  // Custom loading
         'serve.py',          // Flask/FastAPI
-        'nginx.conf',        // Reverse proxy
+        'nginx-predictors.conf', // Traditional ML reverse proxy
         'requirements.txt'   // Traditional deps
     ]
 }
@@ -195,8 +196,9 @@ if (framework === 'transformers') {
 
 Files are conditionally excluded based on configuration:
 
-- **Transformers**: Excludes traditional ML serving code (model_handler.py, serve.py, nginx.conf)
-- **Traditional ML**: Excludes transformer serving code (code/serve, upload_to_s3.sh)
+- **Transformers**: Excludes traditional ML serving code (model_handler.py, serve.py, nginx-predictors.conf)
+- **Traditional ML**: Excludes transformer serving code (code/serve, upload_to_s3.sh, nginx-tensorrt.conf, start_server.sh)
+- **TensorRT-LLM**: Includes nginx-tensorrt.conf and start_server.sh for SageMaker compatibility
 - **Non-Flask**: Excludes Flask-specific code
 - **No sample model**: Excludes sample_model/ directory
 - **No testing**: Excludes test/ directory

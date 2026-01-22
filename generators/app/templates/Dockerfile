@@ -51,7 +51,7 @@ RUN mkdir -p /opt/ml/input/data \
     && mkdir -p /opt/ml/output/data \
     && mkdir -p /opt/ml/model
 
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY nginx-predictors.conf /etc/nginx/nginx.conf
 
 # Model files will be provided at runtime via SageMaker model artifacts
 <% if (includeSampleModel) { %>
@@ -83,6 +83,16 @@ ENTRYPOINT ["python", "/opt/ml/code/start_server.py"]
 ARG BASE_IMAGE=vllm/vllm-openai:v0.10.1
 <% } else if (modelServer === 'sglang') { %>
 ARG BASE_IMAGE=lmsysorg/sglang:v0.5.4.post1
+<% } else if (modelServer === 'tensorrt-llm') { %>
+# TensorRT-LLM requires NVIDIA NGC authentication
+# Before building, authenticate with NGC:
+#   1. Create NGC account: https://ngc.nvidia.com/signup
+#   2. Generate API key: https://ngc.nvidia.com/setup/api-key
+#   3. Login: docker login nvcr.io
+#      Username: $oauthtoken
+#      Password: <your-ngc-api-key>
+# Using a stable release for better SageMaker compatibility
+ARG BASE_IMAGE=nvcr.io/nvidia/tensorrt-llm/release:1.2.0rc8
 <% } %>
 
 FROM ${BASE_IMAGE}
@@ -92,6 +102,19 @@ FROM ${BASE_IMAGE}
 ENV VLLM_MODEL="<%= modelName %>"
 <% } else if (modelServer === 'sglang') { %>
 ENV SGLANG_MODEL_PATH="<%= modelName %>"
+<% } else if (modelServer === 'tensorrt-llm') { %>
+ENV TRTLLM_MODEL="<%= modelName %>"
+
+# Disable UCX CUDA transport to avoid symbol lookup errors
+# The UCX CUDA library has compatibility issues with some CUDA versions in SageMaker
+RUN if [ -f /usr/local/ucx/lib/ucx/libuct_cuda.so.0 ]; then \
+        mv /usr/local/ucx/lib/ucx/libuct_cuda.so.0 /usr/local/ucx/lib/ucx/libuct_cuda.so.0.disabled; \
+    fi
+
+ENV UCX_TLS=tcp,self,sm
+ENV UCX_NET_DEVICES=all
+ENV NCCL_IB_DISABLE=1
+ENV NCCL_P2P_DISABLE=1
 <% } %>
 
 <% if (hfToken) { %>
@@ -99,9 +122,29 @@ ENV SGLANG_MODEL_PATH="<%= modelName %>"
 ENV HF_TOKEN="<%= hfToken %>"
 <% } %>
 
+<% if (modelServer === 'tensorrt-llm') { %>
+# Install nginx and curl for reverse proxy and health checks
+RUN apt-get update && \
+    apt-get install -y nginx curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy nginx configuration for TensorRT-LLM
+COPY nginx-tensorrt.conf /etc/nginx/nginx.conf
+
+# Copy TensorRT-LLM serve script
+COPY code/serve /usr/bin/serve_trtllm
+RUN chmod +x /usr/bin/serve_trtllm
+
+# Copy startup script
+COPY code/start_server.sh /usr/bin/start_server.sh
+RUN chmod +x /usr/bin/start_server.sh
+
+ENTRYPOINT [ "/usr/bin/start_server.sh" ]
+<% } else { %>
 COPY code/serve /usr/bin/serve
 RUN chmod 777 /usr/bin/serve
 
 ENTRYPOINT [ "/usr/bin/serve" ]
+<% } %>
 
 <% } %>

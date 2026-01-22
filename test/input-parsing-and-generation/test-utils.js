@@ -21,7 +21,7 @@ export const FRAMEWORKS = {
     sklearn: { formats: ['pkl', 'joblib'], servers: ['flask', 'fastapi'], hasSample: true },
     xgboost: { formats: ['json', 'model', 'ubj'], servers: ['flask', 'fastapi'], hasSample: true },
     tensorflow: { formats: ['keras', 'h5', 'SavedModel'], servers: ['flask', 'fastapi'], hasSample: true },
-    transformers: { formats: [], servers: ['vllm', 'sglang'], hasSample: false }
+    transformers: { formats: [], servers: ['vllm', 'sglang', 'tensorrt-llm'], hasSample: false }
 };
 
 export const REQUIRED_FILES = ['Dockerfile', 'deploy/build_and_push.sh', 'deploy/deploy.sh'];

@@ -273,7 +273,7 @@ CMD ["torchserve", \
 if (this.answers.modelServer === 'torchserve') {
     ignorePatterns.push('**/code/flask/**');
     ignorePatterns.push('**/code/serve.py');
-    ignorePatterns.push('**/nginx.conf');
+    ignorePatterns.push('**/nginx-predictors.conf');
 } else if (this.answers.modelServer !== 'flask') {
     ignorePatterns.push('**/code/flask/**');
 }
@@ -487,7 +487,8 @@ echo "Test with: aws lambda invoke --function-name ${PROJECT_NAME} --payload '{.
 if (this.answers.deployTarget === 'lambda') {
     ignorePatterns.push('**/deploy/build_and_push.sh');
     ignorePatterns.push('**/deploy/deploy.sh');
-    ignorePatterns.push('**/nginx.conf');
+    ignorePatterns.push('**/nginx-predictors.conf');
+    ignorePatterns.push('**/nginx-tensorrt.conf');
 } else {
     ignorePatterns.push('**/deploy/deploy_lambda.sh');
     ignorePatterns.push('**/code/lambda_handler.py');

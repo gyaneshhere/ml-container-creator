@@ -18,6 +18,40 @@ COMPUTE_TYPE=${ML_CODEBUILD_COMPUTE_TYPE:-$COMPUTE_TYPE}
 AWS_REGION=${AWS_REGION:-$AWS_REGION}
 ECR_REPOSITORY_NAME=${ECR_REPOSITORY_NAME:-$ECR_REPOSITORY_NAME}
 
+<% if (modelServer === 'tensorrt-llm') { %>
+# TensorRT-LLM requires NGC authentication
+echo "🔐 TensorRT-LLM requires NVIDIA NGC authentication..."
+
+# Check if NGC_API_KEY environment variable is set
+if [ -z "$NGC_API_KEY" ]; then
+    echo "❌ NGC_API_KEY environment variable not set."
+    echo ""
+    echo "To authenticate with NVIDIA NGC for CodeBuild:"
+    echo "  1. Create account: https://ngc.nvidia.com/signup"
+    echo "  2. Generate API key: https://ngc.nvidia.com/setup/api-key"
+    echo "  3. Set environment variable:"
+    echo "     export NGC_API_KEY='your-api-key-here'"
+    echo ""
+    echo "The NGC_API_KEY will be passed to CodeBuild as an environment variable."
+    echo "Note: For production, consider using AWS Secrets Manager instead."
+    exit 1
+fi
+
+# Login to NGC registry
+echo "Logging into NVIDIA NGC registry..."
+echo "$NGC_API_KEY" | docker login nvcr.io --username '$oauthtoken' --password-stdin
+
+if [ $? -ne 0 ]; then
+    echo "❌ NGC authentication failed. Please check your NGC_API_KEY."
+    exit 1
+fi
+
+echo "✅ Successfully authenticated with NGC"
+echo ""
+
+<% } %>
+
+
 # Get AWS account ID
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 if [ -z "$AWS_ACCOUNT_ID" ]; then
@@ -154,7 +188,7 @@ if [ "$PROJECT_EXISTS" = "None" ] || [ -z "$PROJECT_EXISTS" ] || [ "$PROJECT_EXI
     "description": "Build project for $PROJECT_NAME ML container ($COMPUTE_TYPE)",
     "source": {
         "type": "NO_SOURCE",
-        "buildspec": "version: 0.2\n\nenv:\n  variables:\n    AWS_DEFAULT_REGION: $AWS_REGION\n    AWS_ACCOUNT_ID: \"\"\n    ECR_REPOSITORY_NAME: \"ml-container-creator\"\n    PROJECT_NAME: \"$PROJECT_NAME\"\n    IMAGE_TAG: \"latest\"\n\nphases:\n  pre_build:\n    commands:\n      - echo Logging in to Amazon ECR...\n      - AWS_ACCOUNT_ID=\$(aws sts get-caller-identity --query Account --output text)\n      - aws ecr get-login-password --region \$AWS_DEFAULT_REGION | docker login --username AWS --password-stdin \$AWS_ACCOUNT_ID.dkr.ecr.\$AWS_DEFAULT_REGION.amazonaws.com\n      - REPOSITORY_URI=\$AWS_ACCOUNT_ID.dkr.ecr.\$AWS_DEFAULT_REGION.amazonaws.com/\$ECR_REPOSITORY_NAME\n      - IMAGE_TAG=\${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest}\n      - PROJECT_TAG=\"\$PROJECT_NAME-\$(date +%Y%m%d-%H%M%S)\"\n      - echo Repository URI is \$REPOSITORY_URI\n      - echo Project tag is \$PROJECT_TAG\n      - echo Image tag is \$IMAGE_TAG\n    on-failure: ABORT\n  build:\n    commands:\n      - echo Build started on \`date\`\n      - echo Building the Docker image for project \$PROJECT_NAME...\n      - docker build -t \$REPOSITORY_URI:\$PROJECT_TAG .\n      - docker tag \$REPOSITORY_URI:\$PROJECT_TAG \$REPOSITORY_URI:\$PROJECT_NAME-latest\n      - docker tag \$REPOSITORY_URI:\$PROJECT_TAG \$REPOSITORY_URI:latest\n      - echo Build completed on \`date\`\n    on-failure: ABORT\n  post_build:\n    commands:\n      - echo Post-build started on \`date\`\n      - echo Pushing the Docker images for project \$PROJECT_NAME...\n      - docker push \$REPOSITORY_URI:\$PROJECT_TAG || (echo \"Failed to push project tag \$PROJECT_TAG\" && exit 1)\n      - docker push \$REPOSITORY_URI:\$PROJECT_NAME-latest || (echo \"Failed to push project latest tag\" && exit 1)\n      - docker push \$REPOSITORY_URI:latest || (echo \"Failed to push latest tag\" && exit 1)\n      - echo Successfully pushed images to ECR repository \$ECR_REPOSITORY_NAME\n      - echo \"Available tags:\"\n      - echo \"  - \$PROJECT_TAG (timestamped build)\"\n      - echo \"  - \$PROJECT_NAME-latest (project latest)\"\n      - echo \"  - latest (global latest)\"\n      - echo Writing image definitions file...\n      - printf '[{\"name\":\"%s\",\"imageUri\":\"%s\"}]' \$PROJECT_NAME \$REPOSITORY_URI:\$PROJECT_TAG > imagedefinitions.json\n      - echo Post-build completed on \`date\`\n\nartifacts:\n  files:\n    - imagedefinitions.json\n  name: $PROJECT_NAME-artifacts"
+        "buildspec": "version: 0.2\n\nenv:\n  variables:\n    AWS_DEFAULT_REGION: $AWS_REGION\n    AWS_ACCOUNT_ID: \"\"\n    ECR_REPOSITORY_NAME: \"ml-container-creator\"\n    PROJECT_NAME: \"$PROJECT_NAME\"\n    IMAGE_TAG: \"latest\"<% if (modelServer === 'tensorrt-llm') { %>\n    NGC_API_KEY: \"\"<% } %>\n\nphases:\n  pre_build:\n    commands:<% if (modelServer === 'tensorrt-llm') { %>\n      - echo Logging in to NVIDIA NGC...\n      - |\n        if [ -z \"\$NGC_API_KEY\" ]; then\n          echo \"❌ NGC_API_KEY not set in CodeBuild environment\"\n          exit 1\n        fi\n      - echo \$NGC_API_KEY | docker login nvcr.io --username '\$oauthtoken' --password-stdin\n      - echo ✅ Successfully authenticated with NGC<% } %>\n      - echo Logging in to Amazon ECR...\n      - AWS_ACCOUNT_ID=\$(aws sts get-caller-identity --query Account --output text)\n      - aws ecr get-login-password --region \$AWS_DEFAULT_REGION | docker login --username AWS --password-stdin \$AWS_ACCOUNT_ID.dkr.ecr.\$AWS_DEFAULT_REGION.amazonaws.com\n      - REPOSITORY_URI=\$AWS_ACCOUNT_ID.dkr.ecr.\$AWS_DEFAULT_REGION.amazonaws.com/\$ECR_REPOSITORY_NAME\n      - IMAGE_TAG=\${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest}\n      - PROJECT_TAG=\"\$PROJECT_NAME-\$(date +%Y%m%d-%H%M%S)\"\n      - echo Repository URI is \$REPOSITORY_URI\n      - echo Project tag is \$PROJECT_TAG\n      - echo Image tag is \$IMAGE_TAG\n    on-failure: ABORT\n  build:\n    commands:\n      - echo Build started on \`date\`\n      - echo Building the Docker image for project \$PROJECT_NAME...\n      - docker build -t \$REPOSITORY_URI:\$PROJECT_TAG .\n      - docker tag \$REPOSITORY_URI:\$PROJECT_TAG \$REPOSITORY_URI:\$PROJECT_NAME-latest\n      - docker tag \$REPOSITORY_URI:\$PROJECT_TAG \$REPOSITORY_URI:latest\n      - echo Build completed on \`date\`\n    on-failure: ABORT\n  post_build:\n    commands:\n      - echo Post-build started on \`date\`\n      - echo Pushing the Docker images for project \$PROJECT_NAME...\n      - docker push \$REPOSITORY_URI:\$PROJECT_TAG || (echo \"Failed to push project tag \$PROJECT_TAG\" && exit 1)\n      - docker push \$REPOSITORY_URI:\$PROJECT_NAME-latest || (echo \"Failed to push project latest tag\" && exit 1)\n      - docker push \$REPOSITORY_URI:latest || (echo \"Failed to push latest tag\" && exit 1)\n      - echo Successfully pushed images to ECR repository \$ECR_REPOSITORY_NAME\n      - echo \"Available tags:\"\n      - echo \"  - \$PROJECT_TAG (timestamped build)\"\n      - echo \"  - \$PROJECT_NAME-latest (project latest)\"\n      - echo \"  - latest (global latest)\"\n      - echo Writing image definitions file...\n      - printf '[{\"name\":\"%s\",\"imageUri\":\"%s\"}]' \$PROJECT_NAME \$REPOSITORY_URI:\$PROJECT_TAG > imagedefinitions.json\n      - echo Post-build completed on \`date\`\n\nartifacts:\n  files:\n    - imagedefinitions.json\n  name: $PROJECT_NAME-artifacts"
     },
     "artifacts": {
         "type": "NO_ARTIFACTS"
@@ -284,6 +318,17 @@ fi
 
 # Start build (removed timeout for macOS compatibility)
 echo "Starting build..."
+<% if (modelServer === 'tensorrt-llm') { %>
+# Pass NGC_API_KEY to CodeBuild as environment variable
+aws codebuild start-build \
+    --project-name "$CODEBUILD_PROJECT_NAME" \
+    --source-type-override S3 \
+    --source-location-override "$S3_BUCKET/$S3_KEY" \
+    --environment-variables-override "[{\"name\":\"NGC_API_KEY\",\"value\":\"$NGC_API_KEY\",\"type\":\"PLAINTEXT\"}]" \
+    --region $AWS_REGION \
+    --query 'build.id' \
+    --output text > /tmp/build-id.txt 2>&1
+<% } else { %>
 aws codebuild start-build \
     --project-name "$CODEBUILD_PROJECT_NAME" \
     --source-type-override S3 \
@@ -291,6 +336,7 @@ aws codebuild start-build \
     --region $AWS_REGION \
     --query 'build.id' \
     --output text > /tmp/build-id.txt 2>&1
+<% } %>
 
 START_EXIT_CODE=$?
 BUILD_ID=""

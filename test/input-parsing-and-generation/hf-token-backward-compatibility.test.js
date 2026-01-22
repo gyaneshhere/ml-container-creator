@@ -315,7 +315,7 @@ describe('HuggingFace Token Backward Compatibility Tests', () => {
                 'code/serve.py',
                 'code/flask/gunicorn_config.py',
                 'code/flask/wsgi.py',
-                'nginx.conf',
+                'nginx-predictors.conf',  // Traditional ML nginx config
                 'sample_model/train_abalone.py',
                 'test/test_local_image.sh'
             ]);

@@ -2,21 +2,41 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-echo "Starting <%= modelServer === 'vllm' ? 'vLLM' : 'SGLang' %> server"
+<% if (modelServer === 'vllm') { %>
+echo "Starting vLLM server"
+<% } else if (modelServer === 'sglang') { %>
+echo "Starting SGLang server"
+<% } else if (modelServer === 'tensorrt-llm') { %>
+echo "Starting TensorRT-LLM server"
+<% } %>
 
 # Initialize server arguments
+<% if (modelServer === 'tensorrt-llm') { %>
+# port 8081 for internal TensorRT-LLM server (nginx proxies on 8080)
+SERVER_ARGS=(--host 0.0.0.0 --port 8081)
+<% } else { %>
 # port 8080 required by SageMaker: https://docs.aws.amazon.com/sagemaker/latest/dg/your-algorithms-inference-code.html#your-algorithms-inference-code-container-response
 SERVER_ARGS=(--host 0.0.0.0 --port 8080)
+<% } %>
 
 # Define the prefix for environment variables to look for
-PREFIX="<%= modelServer === 'vllm' ? 'VLLM_' : 'SGLANG_' %>"
+<% if (modelServer === 'vllm') { %>
+PREFIX="VLLM_"
+<% } else if (modelServer === 'sglang') { %>
+PREFIX="SGLANG_"
+<% } else if (modelServer === 'tensorrt-llm') { %>
+PREFIX="TRTLLM_"
+<% } %>
 ARG_PREFIX="--"
 
 # Define environment variables to exclude (internal variables set by base images)
 <% if (modelServer === 'vllm') { %>
 EXCLUDE_VARS=("VLLM_USAGE_SOURCE")
-<% } else { %>
+<% } else if (modelServer === 'sglang') { %>
 EXCLUDE_VARS=()
+<% } else if (modelServer === 'tensorrt-llm') { %>
+# Exclude TRTLLM_MODEL as it's used as the positional MODEL argument
+EXCLUDE_VARS=("TRTLLM_MODEL")
 <% } %>
 
 # Declare and populate array of matching environment variables
@@ -48,12 +68,26 @@ for var in "${env_vars[@]}"; do
 done
 
 echo "-------------------------------------------------------------------"
-echo "<%= modelServer === 'vllm' ? 'vLLM' : 'SGLang' %> engine args: [${SERVER_ARGS[@]}]"
+<% if (modelServer === 'vllm') { %>
+echo "vLLM engine args: [${SERVER_ARGS[@]}]"
+<% } else if (modelServer === 'sglang') { %>
+echo "SGLang engine args: [${SERVER_ARGS[@]}]"
+<% } else if (modelServer === 'tensorrt-llm') { %>
+echo "TensorRT-LLM engine args: [${SERVER_ARGS[@]}]"
+<% } %>
 echo "-------------------------------------------------------------------"
 
 # Pass the collected arguments to the main entrypoint
 <% if (modelServer === 'vllm') { %>
 exec python3 -m vllm.entrypoints.openai.api_server "${SERVER_ARGS[@]}"
-<% } else { %>
+<% } else if (modelServer === 'sglang') { %>
 exec python3 -m sglang.launch_server "${SERVER_ARGS[@]}"
+<% } else if (modelServer === 'tensorrt-llm') { %>
+# TensorRT-LLM requires the model as a positional argument
+# Syntax: trtllm-serve serve MODEL [OPTIONS]
+if [ -z "$TRTLLM_MODEL" ]; then
+    echo "Error: TRTLLM_MODEL environment variable is not set"
+    exit 1
+fi
+exec trtllm-serve serve "$TRTLLM_MODEL" "${SERVER_ARGS[@]}"
 <% } %>

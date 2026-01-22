@@ -14,6 +14,7 @@
   ],
   "scripts": {
     "test": "mocha test/**/*.test.js",
+    "test:ci": "mocha test/**/*.test.js",
     "test:watch": "mocha test/**/*.test.js --watch",
     "test:coverage": "nyc mocha test/**/*.test.js",
     "test:property": "mocha test/**/*.property.test.js",
@@ -70,7 +71,7 @@
       "request": "2.88.2"
     },
     "cross-spawn": "^7.0.3",
-    "diff": "^5.1.0",
+    "diff": "^5.2.2",
     "dot-prop": "^8.0.2",
     "form-data": "^2.5.4",
     "lodash": "^4.17.21",

@@ -42,6 +42,7 @@ MODEL_NAME="${IMAGE_NAME}-model-${TIMESTAMP}"
 ENDPOINT_CONFIG_NAME="${IMAGE_NAME}-endpoint-config-${TIMESTAMP}"
 ENDPOINT_NAME="${IMAGE_NAME}-endpoint-${TIMESTAMP}"
 <% if (instanceType === 'cpu-optimized') { %>INSTANCE_TYPE="ml.m6g.large"
+<% } else if (instanceType === 'gpu-enabled' && framework === 'transformers' && modelServer === 'tensorrt-llm') { %>INSTANCE_TYPE="ml.g5.12xlarge"
 <% } else if (instanceType === 'gpu-enabled' && framework === 'transformers') { %>INSTANCE_TYPE="ml.g6.12xlarge"
 <% } else if (instanceType === 'gpu-enabled') { %>INSTANCE_TYPE="ml.g5.xlarge"
 <% } else if (instanceType === 'custom') { %>INSTANCE_TYPE="<%= customInstanceType %>"
@@ -84,10 +85,18 @@ aws sagemaker create-model \
 
 # Create endpoint configuration
 echo "Creating endpoint configuration: ${ENDPOINT_CONFIG_NAME}"
+<% if (framework === 'transformers' && modelServer === 'tensorrt-llm') { %>
+# Use newest AMI version for TensorRT-LLM to ensure latest CUDA driver compatibility
+aws sagemaker create-endpoint-config \
+    --endpoint-config-name ${ENDPOINT_CONFIG_NAME} \
+    --production-variants VariantName=primary,ModelName=${MODEL_NAME},InitialInstanceCount=1,InstanceType=${INSTANCE_TYPE},InitialVariantWeight=1,InferenceAmiVersion=al2-ami-sagemaker-inference-gpu-3-1 \
+    --region ${AWS_REGION}
+<% } else { %>
 aws sagemaker create-endpoint-config \
     --endpoint-config-name ${ENDPOINT_CONFIG_NAME} \
     --production-variants VariantName=primary,ModelName=${MODEL_NAME},InitialInstanceCount=1,InstanceType=${INSTANCE_TYPE},InitialVariantWeight=1 \
     --region ${AWS_REGION}
+<% } %>
 
 # Create endpoint
 echo "Creating endpoint: ${ENDPOINT_NAME}"

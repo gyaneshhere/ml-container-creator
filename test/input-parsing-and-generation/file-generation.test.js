@@ -73,7 +73,7 @@ describe.skip('File Generation', () => {
                         if (framework === 'transformers') {
                             console.log('      🤖 Checking transformers-specific files...');
                             validateFiles(TRANSFORMER_FILES, `${framework} specific files`);
-                            validateNoFiles(['code/model_handler.py', 'code/serve.py', 'nginx.conf', 'requirements.txt'], `${framework} excluded files`);
+                            validateNoFiles(['code/model_handler.py', 'code/serve.py', 'nginx-predictors.conf', 'requirements.txt'], `${framework} excluded files`);
                         } else {
                             console.log('      🔧 Checking traditional ML files...');
                             validateFiles(TRADITIONAL_ML_FILES, `${framework} traditional ML files`);

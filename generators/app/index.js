@@ -157,6 +157,7 @@ export default class extends Generator {
         if (errors.length > 0) {
             console.log(`⚠️  ${errors[0]}`);
             this._validationFailed = true;
+            this._validationError = errors[0];
             return;
         }
 
@@ -219,8 +220,14 @@ export default class extends Generator {
      */
     writing() {
         // If help was shown, validation failed, configuration failed, or no answers, skip writing
-        if (this._helpShown || this._validationFailed || this._configurationFailed || !this.answers) {
+        if (this._helpShown || this._configurationFailed || !this.answers) {
             return;
+        }
+        
+        // If validation failed in initializing phase, throw the error now
+        if (this._validationFailed && this._validationError) {
+            this.env.error(this._validationError);
+            throw new Error(this._validationError);
         }
 
         // Validate required parameters before file generation

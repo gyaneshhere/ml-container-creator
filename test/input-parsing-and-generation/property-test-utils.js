@@ -31,7 +31,7 @@ export const PARAMETER_MATRIX = {
         promptable: true,
         required: true,
         default: null,
-        values: ['flask', 'fastapi', 'vllm', 'sglang']
+        values: ['flask', 'fastapi', 'vllm', 'sglang', 'tensorrt-llm']
     },
     
     modelFormat: {
@@ -355,7 +355,7 @@ export function isValidFrameworkServerCombination(framework, modelServer) {
         sklearn: ['flask', 'fastapi'],
         xgboost: ['flask', 'fastapi'],
         tensorflow: ['flask', 'fastapi'],
-        transformers: ['vllm', 'sglang']
+        transformers: ['vllm', 'sglang', 'tensorrt-llm']
     };
     
     return validCombinations[framework]?.includes(modelServer) || false;

@@ -60,6 +60,16 @@ export default class PromptRunner {
         console.log('\n💪 Infrastructure & Performance');
         const infraAnswers = await this._runPhase(infrastructurePrompts, frameworkAnswers, explicitConfig, existingConfig);
 
+        // Show warning for SageMaker deployment target
+        if (infraAnswers.deployTarget === 'sagemaker') {
+            console.log('\n⚠️  Warning: Building locally for SageMaker deployment');
+            console.log('   Building this image locally may result in `exec format error` when deploying');
+            console.log('   to SageMaker if your local architecture differs from the target instance.');
+            console.log('   Ensure you have set the appropriate --platform flag in your Dockerfile');
+            console.log('   (e.g., --platform=linux/amd64 for x86_64 instances, --platform=linux/arm64 for ARM).');
+            console.log('   Consider using CodeBuild for architecture-independent builds.\n');
+        }
+
         // Phase 4: Project Configuration (moved to end)
         console.log('\n📋 Project Configuration');
         const allTechnicalAnswers = {
