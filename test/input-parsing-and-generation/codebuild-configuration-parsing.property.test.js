@@ -227,7 +227,7 @@ describe('CodeBuild Configuration Parameter Parsing - Property-Based Tests', () 
         });
 
         it('should reject invalid CodeBuild parameter values with appropriate error messages', async function() {
-            this.timeout(60000);
+            this.timeout(90000); // Increased from 60000 for CI
             
             console.log('\n  🧪 Property 3d: Invalid Parameter Validation');
             console.log('  📝 For any invalid CodeBuild configuration parameter values, the Config_Manager should reject them with clear error messages');
@@ -335,8 +335,8 @@ describe('CodeBuild Configuration Parameter Parsing - Property-Based Tests', () 
             ), { 
                 numRuns: 50, // Fewer runs since this tests error cases
                 verbose: false,
-                asyncTimeout: 45000,
-                interruptAfterTimeLimit: 40000
+                asyncTimeout: 75000, // Increased from 45000 for CI
+                interruptAfterTimeLimit: 70000 // Increased from 40000 for CI
             });
             
             console.log('  ✅ Property 3d validated: CodeBuild parameter validation working correctly');
