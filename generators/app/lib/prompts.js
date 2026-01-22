@@ -229,8 +229,11 @@ const infrastructurePrompts = [
         type: 'list',
         name: 'deployTarget',
         message: 'Deployment target?',
-        choices: ['sagemaker', 'codebuild'],
-        default: 'sagemaker'
+        choices: [
+            { name: 'codebuild (recommended)', value: 'codebuild' },
+            { name: 'sagemaker', value: 'sagemaker' }
+        ],
+        default: 'codebuild'
     },
     {
         type: 'list',

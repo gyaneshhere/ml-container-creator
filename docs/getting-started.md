@@ -128,7 +128,7 @@ You'll be prompted with questions. Here's what to answer for this example:
              ✓ hosted-model-endpoint
 
 💪 Infrastructure & Performance
-? Deployment target? sagemaker
+? Deployment target? codebuild (recommended)
 ? Instance type? CPU-optimized (ml.m6g.large)
 ? Target AWS region? us-east-1
 ```
@@ -136,10 +136,12 @@ You'll be prompted with questions. Here's what to answer for this example:
 !!! info "Deployment Targets"
     ML Container Creator supports two deployment approaches:
     
-    - **SageMaker**: Direct deployment - builds and deploys locally (good for development)
-    - **CodeBuild**: CI/CD pipeline - automated building in AWS (good for production)
+    - **CodeBuild (recommended)**: CI/CD pipeline - automated building in AWS with correct architecture
+    - **SageMaker**: Direct deployment - builds locally (may have architecture compatibility issues)
     
-    For this getting started example, we'll use SageMaker direct deployment. For CodeBuild CI/CD, see the [CodeBuild Example](EXAMPLES.md#example-5-deploy-with-codebuild-cicd).
+    **Architecture Warning**: When building locally for SageMaker, you may encounter `exec format error` if your local architecture (e.g., ARM64 on Apple Silicon) differs from the target instance (e.g., x86_64). CodeBuild avoids this by building in AWS with the correct architecture.
+    
+    For this getting started example, we'll use CodeBuild deployment. For SageMaker direct deployment, see the [Examples](EXAMPLES.md).
 
 ### Step 3: Add Your Model
 

@@ -44,25 +44,11 @@ Before you begin, ensure you have:
 
 ML Container Creator supports two deployment approaches to fit different workflows:
 
-### 🎯 **Direct SageMaker Deployment**
-Perfect for development and quick deployments:
-- Build and push Docker image locally
-- Deploy directly to SageMaker endpoint
-- Ideal for prototyping and development environments
-
-```bash
-# Generate project with SageMaker deployment
-yo ml-container-creator my-model --deploy-target=sagemaker --skip-prompts
-
-# Deploy to SageMaker
-cd my-model
-./deploy/deploy.sh your-sagemaker-role-arn
-```
-
-### 🏗️ **CodeBuild CI/CD Pipeline**
+### 🏗️ **CodeBuild CI/CD Pipeline (Recommended)**
 Enterprise-ready CI/CD with AWS CodeBuild:
-- Automated Docker image building in AWS
+- Automated Docker image building in AWS with correct architecture
 - Shared ECR repository with project-specific tagging
+- No local architecture compatibility issues
 - Integrated with AWS infrastructure
 - Perfect for production and team environments
 
@@ -74,6 +60,22 @@ yo ml-container-creator my-model --deploy-target=codebuild --skip-prompts
 cd my-model
 ./deploy/submit_build.sh  # Builds image in CodeBuild
 ./deploy/deploy.sh your-sagemaker-role-arn  # Deploys to SageMaker
+```
+
+### 🎯 **Direct SageMaker Deployment**
+Quick local builds for development:
+- Build and push Docker image locally
+- Deploy directly to SageMaker endpoint
+- Ideal for prototyping and development environments
+- ⚠️ **Note**: May encounter architecture compatibility issues (e.g., ARM64 Mac → x86_64 SageMaker)
+
+```bash
+# Generate project with SageMaker deployment
+yo ml-container-creator my-model --deploy-target=sagemaker --skip-prompts
+
+# Deploy to SageMaker
+cd my-model
+./deploy/deploy.sh your-sagemaker-role-arn
 ```
 
 ### 🔄 **CodeBuild Features**
