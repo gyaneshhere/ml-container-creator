@@ -285,7 +285,7 @@ Your generated project contains:
 iris-classifier-2024-12-02/
 ├── Dockerfile              # Container definition
 ├── requirements.txt        # Python dependencies
-├── nginx.conf             # Nginx configuration
+├── nginx-predictors.conf   # Nginx configuration
 ├── code/
 │   ├── model.pkl          # Your trained model
 │   ├── model_handler.py   # Model loading and inference
@@ -442,7 +442,8 @@ For complete configuration documentation, see the [Configuration Guide](configur
 ### Try Other Frameworks
 - [Deploy an XGBoost Model](EXAMPLES.md#example-2-deploy-an-xgboost-model)
 - [Deploy a TensorFlow Model](EXAMPLES.md#example-3-deploy-a-tensorflow-model)
-- [Deploy a Transformer Model](EXAMPLES.md#example-4-deploy-a-transformer-model-llm)
+- [Deploy a Transformer Model with vLLM](EXAMPLES.md#example-4-deploy-a-transformer-model-llm)
+- [Deploy a Transformer Model with TensorRT-LLM](EXAMPLES.md#example-6-deploy-a-transformer-model-with-tensorrt-llm)
 
 ### Advanced Topics
 - [Adding New Features](ADDING_FEATURES.md) - Contribute to the project

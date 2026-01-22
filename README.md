@@ -29,7 +29,7 @@ Every generated project includes:
 - **Local testing suite** to validate before deployment
 - **Sample model and training code** to illustrate the deployment
 - **AWS deployment scripts** for ECR and SageMaker
-- **Multi-framework support** (sklearn, XGBoost, TensorFlow, vLLM, SGLang)
+- **Multi-framework support** (sklearn, XGBoost, TensorFlow, vLLM, SGLang, TensorRT-LLM)
 
 > **Note**: This tool generates starter code. Review and customize for your production requirements.
 
@@ -183,7 +183,7 @@ yo ml-container-creator --config=production.json --skip-prompts
 | `--config=<file>` | Load configuration from file | File path |
 | `--project-name=<name>` | Project name | String |
 | `--framework=<framework>` | ML framework | `sklearn`, `xgboost`, `tensorflow`, `transformers` |
-| `--model-server=<server>` | Model server | `flask`, `fastapi`, `vllm`, `sglang` |
+| `--model-server=<server>` | Model server | `flask`, `fastapi`, `vllm`, `sglang`, `tensorrt-llm` |
 | `--model-format=<format>` | Model format | Depends on framework |
 | `--include-sample` | Include sample model code | `true/false` |
 | `--include-testing` | Include test suite | `true/false` |
@@ -257,10 +257,11 @@ yo ml-container-creator --config=production.json --skip-prompts
 - **Instance Types**: `cpu-optimized`, `gpu-enabled`
 
 #### Transformers (LLMs)
-- **Model Servers**: `vllm`, `sglang`
+- **Model Servers**: `vllm`, `sglang`, `tensorrt-llm`
 - **Model Formats**: Not applicable (loaded from Hugging Face Hub)
 - **Sample Model**: Not available
 - **Instance Types**: `gpu-enabled` (defaults to `ml.g6.12xlarge`)
+- **Note**: TensorRT-LLM requires [NVIDIA NGC authentication](#tensorrt-llm-authentication) to pull the base image
 
 ### Example: Deploy a scikit-learn Model
 
@@ -348,7 +349,56 @@ yo ml-container-creator my-llm-project \
 
 4. **Rotate tokens regularly**: Generate new tokens periodically from your HuggingFace account.
 
-5. **Use read-only tokens**: Create tokens with minimal permissions (read-only access to specific models).
+### TensorRT-LLM Authentication
+
+TensorRT-LLM uses NVIDIA's NGC (NVIDIA GPU Cloud) registry, which requires authentication:
+
+**Before building a TensorRT-LLM container:**
+
+1. **Create an NGC account**: Visit [https://ngc.nvidia.com/signup](https://ngc.nvidia.com/signup)
+
+2. **Generate an API key**:
+   - Go to [https://ngc.nvidia.com/setup/api-key](https://ngc.nvidia.com/setup/api-key)
+   - Click "Generate API Key"
+   - Save your API key securely
+
+3. **Set NGC_API_KEY environment variable**:
+   ```bash
+   export NGC_API_KEY='your-api-key-here'
+   ```
+
+4. **Build and deploy**:
+
+   **For SageMaker deployment (local build):**
+   ```bash
+   cd deploy
+   ./build_and_push.sh  # Automatically authenticates with NGC using NGC_API_KEY
+   ```
+
+   **For CodeBuild deployment (CI/CD):**
+   ```bash
+   cd deploy
+   ./submit_build.sh    # Passes NGC_API_KEY to CodeBuild
+   ```
+
+**How it works:**
+- The build scripts automatically authenticate with NGC using your `NGC_API_KEY` environment variable
+- For local builds (`build_and_push.sh`), Docker login happens on your machine
+- For CodeBuild (`submit_build.sh`), the NGC_API_KEY is passed as a CodeBuild environment variable
+- No manual `docker login` required!
+
+**Security Note for CodeBuild:**
+- NGC_API_KEY is passed as a plaintext environment variable to CodeBuild
+- For production, consider using AWS Secrets Manager:
+  ```bash
+  # Store in Secrets Manager
+  aws secretsmanager create-secret --name ngc-api-key --secret-string "$NGC_API_KEY"
+  
+  # Update buildspec to retrieve from Secrets Manager
+  # See AWS CodeBuild documentation for details
+  ```
+
+**Note**: NGC authentication is only required for TensorRT-LLM. vLLM and SGLang use publicly available images.
 
 ### Getting Your HF_TOKEN
 

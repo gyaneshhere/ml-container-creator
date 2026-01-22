@@ -690,7 +690,12 @@ export default class ConfigManager {
         if (this.config.modelServer && this.config.framework) {
             const validServers = supportedOptions.modelServers[this.config.framework] || [];
             if (!validServers.includes(this.config.modelServer)) {
-                errors.push(`Unsupported model server '${this.config.modelServer}' for framework '${this.config.framework}'. Supported: ${validServers.join(', ')}`);
+                // Special error message for tensorrt-llm with non-transformers framework
+                if (this.config.modelServer === 'tensorrt-llm' && this.config.framework !== 'transformers') {
+                    errors.push('TensorRT-LLM is only supported with the transformers framework. Please select "transformers" as your framework or choose a different model server.');
+                } else {
+                    errors.push(`Unsupported model server '${this.config.modelServer}' for framework '${this.config.framework}'. Supported: ${validServers.join(', ')}`);
+                }
             }
         }
 
@@ -1117,7 +1122,7 @@ export default class ConfigManager {
                 'sklearn': ['flask', 'fastapi'],
                 'xgboost': ['flask', 'fastapi'],
                 'tensorflow': ['flask', 'fastapi'],
-                'transformers': ['vllm', 'sglang']
+                'transformers': ['vllm', 'sglang', 'tensorrt-llm']
             },
             modelFormats: {
                 'sklearn': ['pkl', 'joblib'],

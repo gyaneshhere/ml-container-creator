@@ -59,15 +59,23 @@ export default class TemplateManager {
      * @private
      */
     _getTransformerExclusions() {
-        return [
+        const exclusions = [
             '**/code/model_handler.py',     // Custom model loading
             '**/code/start_server.py',      // Flask/FastAPI startup
             '**/code/serve.py',             // Flask/FastAPI server
-            '**/nginx.conf**',              // Nginx reverse proxy
+            '**/nginx-predictors.conf',     // Traditional ML nginx config
             '**/requirements.txt**',        // Traditional ML dependencies
             '**/test/test_local_image.sh',  // Local testing
             '**/test/test_model_handler.py' // Unit tests
         ];
+
+        // TensorRT-LLM needs nginx-tensorrt.conf and start_server.sh, others don't
+        if (this.answers.modelServer !== 'tensorrt-llm') {
+            exclusions.push('**/nginx-tensorrt.conf');
+            exclusions.push('**/code/start_server.sh');
+        }
+
+        return exclusions;
     }
 
     /**
@@ -77,6 +85,8 @@ export default class TemplateManager {
     _getTraditionalMLExclusions() {
         return [
             '**/code/serve',                // vLLM/SGLang entrypoint
+            '**/code/start_server.sh',      // TensorRT-LLM startup script
+            '**/nginx-tensorrt.conf',       // TensorRT-LLM nginx config
             '**/deploy/upload_to_s3.sh'     // S3 model upload script
         ];
     }
@@ -110,7 +120,7 @@ export default class TemplateManager {
     validate() {
         const supportedOptions = {
             frameworks: ['sklearn', 'xgboost', 'tensorflow', 'transformers'],
-            modelServer: ['flask', 'fastapi', 'vllm', 'sglang'],
+            modelServer: ['flask', 'fastapi', 'vllm', 'sglang', 'tensorrt-llm'],
             deployment: ['sagemaker', 'codebuild'],
             testTypes: ['local-model-cli', 'local-model-server', 'hosted-model-endpoint'],
             instanceTypes: ['cpu-optimized', 'gpu-enabled', 'custom'],
@@ -133,6 +143,11 @@ export default class TemplateManager {
             for (const testType of this.answers.testTypes) {
                 this._validateChoice('testType', supportedOptions.testTypes, testType);
             }
+        }
+
+        // Validate tensorrt-llm is only used with transformers framework
+        if (this.answers.modelServer === 'tensorrt-llm' && this.answers.framework !== 'transformers') {
+            throw new Error('⚠️  TensorRT-LLM is only supported with the transformers framework. Please select "transformers" as your framework or choose a different model server.');
         }
     }
 

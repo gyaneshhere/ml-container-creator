@@ -104,7 +104,7 @@ const modelServerPrompts = [
         message: 'Which model server are you serving with?',
         choices: (answers) => {
             if (answers.framework === 'transformers') {
-                return ['vllm', 'sglang'];
+                return ['vllm', 'sglang', 'tensorrt-llm'];
             }
             return ['flask', 'fastapi'];
         }
@@ -250,6 +250,14 @@ const infrastructurePrompts = [
         message: 'Instance type?',
         choices: (answers) => {
             if (answers.framework === 'transformers') {
+                // TensorRT-LLM needs A10G GPUs (ml.g5) for better compatibility
+                if (answers.modelServer === 'tensorrt-llm') {
+                    return [
+                        { name: 'GPU-optimized (ml.g5.12xlarge - recommended for TensorRT-LLM)', value: 'gpu-enabled' },
+                        { name: 'Custom instance type', value: 'custom' }
+                    ];
+                }
+                // vLLM and SGLang work well with newer L4 GPUs (ml.g6)
                 return [
                     { name: 'GPU-optimized (ml.g6.12xlarge)', value: 'gpu-enabled' },
                     { name: 'Custom instance type', value: 'custom' }
@@ -261,7 +269,7 @@ const infrastructurePrompts = [
                 { name: 'Custom instance type', value: 'custom' }
             ];
         },
-        default: 'cpu-optimized'
+        default: 'gpu-enabled'
     },
     {
         type: 'input',

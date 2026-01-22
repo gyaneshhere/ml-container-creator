@@ -56,7 +56,7 @@ templates/
 │   ├── test_local_image.sh # Test local Docker container
 │   └── test_model_handler.py # Unit tests for model handler
 ├── Dockerfile              # Container definition
-├── nginx.conf              # Nginx configuration (traditional ML only)
+├── nginx-predictors.conf   # Nginx configuration (traditional ML only)
 └── requirements.txt        # Python dependencies
 ```
 
@@ -70,13 +70,19 @@ When `framework === 'transformers'`:
   - `code/model_handler.py`
   - `code/serve.py`
   - `code/start_server.py`
-  - `nginx.conf`
+  - `nginx-predictors.conf`
   - `requirements.txt` (uses transformer-specific version)
   - `test/test_local_image.sh`
   - `test/test_model_handler.py`
 - **Included**: Transformer-specific files
-  - `code/serve` (vLLM/SGLang entrypoint)
+  - `code/serve` (vLLM/SGLang/TensorRT-LLM entrypoint)
   - `deploy/upload_to_s3.sh`
+
+### TensorRT-LLM Specific Files
+When `modelServer === 'tensorrt-llm'`:
+- **Additional Included Files**:
+  - `nginx-tensorrt.conf` - Nginx reverse proxy for OpenAI API compatibility
+  - `code/start_server.sh` - Startup script that launches TensorRT-LLM and nginx
 
 ### Traditional ML Configuration
 When `framework !== 'transformers'`:

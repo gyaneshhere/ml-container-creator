@@ -9,6 +9,40 @@ AWS_REGION="<%= awsRegion %>"
 # Use shared ECR repository for all ML container projects
 ECR_REPOSITORY_NAME="ml-container-creator"
 
+<% if (modelServer === 'tensorrt-llm') { %>
+# TensorRT-LLM requires NGC authentication
+echo "🔐 TensorRT-LLM requires NVIDIA NGC authentication..."
+
+# Check if NGC_API_KEY environment variable is set
+if [ -z "$NGC_API_KEY" ]; then
+    echo "❌ NGC_API_KEY environment variable not set."
+    echo ""
+    echo "To authenticate with NVIDIA NGC:"
+    echo "  1. Create account: https://ngc.nvidia.com/signup"
+    echo "  2. Generate API key: https://ngc.nvidia.com/setup/api-key"
+    echo "  3. Set environment variable:"
+    echo "     export NGC_API_KEY='your-api-key-here'"
+    echo ""
+    echo "Alternatively, you can login manually:"
+    echo "  docker login nvcr.io"
+    echo "  Username: \$oauthtoken"
+    echo "  Password: <your-ngc-api-key>"
+    exit 1
+fi
+
+# Login to NGC registry
+echo "Logging into NVIDIA NGC registry..."
+echo "$NGC_API_KEY" | docker login nvcr.io --username '$oauthtoken' --password-stdin
+
+if [ $? -ne 0 ]; then
+    echo "❌ NGC authentication failed. Please check your NGC_API_KEY."
+    exit 1
+fi
+
+echo "✅ Successfully authenticated with NGC"
+echo ""
+
+<% } %>
 # Check AWS credentials
 if ! aws sts get-caller-identity >/dev/null 2>&1; then
     echo "❌ AWS credentials not configured. Please run 'aws configure' first."
