@@ -6,6 +6,7 @@ import PromptRunner from './lib/prompt-runner.js';
 import TemplateManager from './lib/template-manager.js';
 import ConfigManager from './lib/config-manager.js';
 import CliHandler from './lib/cli-handler.js';
+import ConfigurationManager from './lib/configuration-manager.js';
 
 /**
  * ML Container Creator Generator
@@ -124,6 +125,22 @@ export default class extends Generator {
             type: String,
             description: 'HuggingFace authentication token (or "$HF_TOKEN" to use environment variable)'
         });
+
+        // Validation flags
+        this.option('validate-env-vars', {
+            type: Boolean,
+            description: 'Enable environment variable validation (default: true)'
+        });
+
+        this.option('validate-with-docker', {
+            type: Boolean,
+            description: 'Enable Docker-based introspection validation (default: false, opt-in only)'
+        });
+
+        this.option('offline', {
+            type: Boolean,
+            description: 'Disable HuggingFace API lookups for offline mode (default: false)'
+        });
     }
 
     /**
@@ -159,6 +176,59 @@ export default class extends Generator {
             this._validationFailed = true;
             this._validationError = errors[0];
             return;
+        }
+
+        // Initialize multi-registry configuration manager
+        // Requirements: 1.7, 2.8
+        try {
+            // Determine validation flags with precedence: CLI > env vars > config file > defaults
+            // Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7, 11.12
+            const validateEnvVars = this._getValidationFlag('validate-env-vars', 'VALIDATE_ENV_VARS', true);
+            const validateWithDocker = this._getValidationFlag('validate-with-docker', 'VALIDATE_WITH_DOCKER', false);
+            const offline = this._getValidationFlag('offline', 'OFFLINE_MODE', false);
+            
+            // If validate-with-docker is enabled but validate-env-vars is disabled, warn and disable Docker validation
+            // Requirements: 13.7
+            let effectiveValidateWithDocker = validateWithDocker;
+            if (validateWithDocker && !validateEnvVars) {
+                console.log('\n⚠️  Warning: --validate-with-docker requires --validate-env-vars to be enabled');
+                console.log('   Docker validation will be disabled');
+                effectiveValidateWithDocker = false;
+            }
+            
+            this.registryConfigManager = new ConfigurationManager({
+                validateEnvVars,
+                validateWithDocker: effectiveValidateWithDocker,
+                offline,
+                hfTimeout: 5000
+            });
+            
+            // Load registries during initialization
+            await this.registryConfigManager.loadRegistries();
+            
+            console.log('\n📚 Registry System Initialized');
+            console.log('   • Framework Registry: Loaded');
+            console.log('   • Model Registry: Loaded');
+            console.log('   • Instance Accelerator Mapping: Loaded');
+            
+            // Show validation configuration
+            if (validateEnvVars) {
+                console.log('   • Environment Variable Validation: Enabled');
+                if (effectiveValidateWithDocker) {
+                    console.log('   • Docker Introspection Validation: Enabled (experimental)');
+                }
+            } else {
+                console.log('   • Environment Variable Validation: Disabled');
+            }
+            
+            if (offline) {
+                console.log('   • HuggingFace API: Offline mode');
+            }
+        } catch (error) {
+            // Graceful degradation - continue without registries
+            console.log('\n⚠️  Registry system initialization failed, using defaults');
+            console.log(`   Error: ${error.message}`);
+            this.registryConfigManager = null;
         }
 
         // Show configuration source info if not skipping prompts
@@ -200,6 +270,10 @@ export default class extends Generator {
         if (this.configManager.shouldSkipPrompts()) {
             console.log('\n🚀 Skipping prompts - using configuration from other sources');
             this.answers = this.configManager.getFinalConfiguration();
+            
+            // Ensure all template variables are initialized
+            await this._ensureTemplateVariables();
+            
             return;
         }
 
@@ -208,6 +282,9 @@ export default class extends Generator {
         
         // Merge prompt answers with configuration from other sources
         this.answers = this.configManager.getFinalConfiguration(promptAnswers);
+        
+        // Ensure all template variables are initialized
+        await this._ensureTemplateVariables();
     }
 
     /**
@@ -218,7 +295,7 @@ export default class extends Generator {
      * 
      * @returns {void}
      */
-    writing() {
+    async writing() {
         // If help was shown, validation failed, configuration failed, or no answers, skip writing
         if (this._helpShown || this._configurationFailed || !this.answers) {
             return;
@@ -245,6 +322,12 @@ export default class extends Generator {
             }
         }
 
+        // Validate environment variables if registry system is available
+        // Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7, 13.19, 13.20, 13.21, 13.22, 13.23
+        if (this.registryConfigManager && this.answers.frameworkVersion) {
+            await this._validateEnvironmentVariables();
+        }
+
         // Set destination directory for generated files
         this.destinationRoot(this.answers.destinationDir);
 
@@ -258,14 +341,29 @@ export default class extends Generator {
             throw error; // Re-throw the error so tests can catch it
         }
 
+        // Generate comments for templates using CommentGenerator
+        const CommentGenerator = (await import('./lib/comment-generator.js')).default;
+        const commentGenerator = new CommentGenerator();
+        const comments = commentGenerator.generateDockerfileComments(this.answers);
+        
+        // Prepare ordered environment variables for template
+        const orderedEnvVars = this._getOrderedEnvVars(this.answers.envVars || {});
+
         // Get ignore patterns based on configuration
         const ignorePatterns = templateManager.getIgnorePatterns();
+
+        // Prepare template variables with comments and ordered env vars
+        const templateVars = {
+            ...this.answers,
+            comments,
+            orderedEnvVars
+        };
 
         // Copy all templates, processing EJS variables and excluding ignored patterns
         this.fs.copyTpl(
             this.templatePath('**/*'),
             this.destinationPath(),
-            this.answers,
+            templateVars,
             {},
             { globOptions: { ignore: ignorePatterns } }
         );
@@ -374,6 +472,278 @@ export default class extends Generator {
                 // Silently continue if chmod fails (e.g., on Windows)
             }
         });
+    }
+
+    /**
+     * Get validation flag value with precedence: CLI > env vars > config file > defaults
+     * Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7, 11.12
+     * @param {string} cliOptionName - Name of the CLI option (e.g., 'validate-env-vars')
+     * @param {string} envVarName - Name of the environment variable (e.g., 'VALIDATE_ENV_VARS')
+     * @param {boolean} defaultValue - Default value if not specified anywhere
+     * @returns {boolean} The resolved flag value
+     * @private
+     */
+    _getValidationFlag(cliOptionName, envVarName, defaultValue) {
+        // Precedence order: CLI > env vars > config file > defaults
+        
+        // 1. Check CLI option (highest priority)
+        if (this.options[cliOptionName] !== undefined) {
+            return this.options[cliOptionName];
+        }
+        
+        // 2. Check environment variable
+        if (process.env[envVarName] !== undefined) {
+            // Convert string to boolean
+            const envValue = process.env[envVarName].toLowerCase();
+            return envValue === 'true' || envValue === '1' || envValue === 'yes';
+        }
+        
+        // 3. Check config file (if loaded)
+        if (this.baseConfig && this.baseConfig[cliOptionName] !== undefined) {
+            return this.baseConfig[cliOptionName];
+        }
+        
+        // 4. Use default value
+        return defaultValue;
+    }
+
+    /**
+     * Validate environment variables using registry system
+     * Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7, 13.19, 13.20, 13.21, 13.22, 13.23
+     * @private
+     */
+    async _validateEnvironmentVariables() {
+        // Get framework configuration
+        const frameworkConfig = this.registryConfigManager.frameworkRegistry?.[this.answers.framework]?.[this.answers.frameworkVersion];
+        
+        if (!frameworkConfig || !frameworkConfig.envVars) {
+            return; // No env vars to validate
+        }
+        
+        console.log('\n🔍 Validating environment variables...');
+        
+        // Validate environment variables
+        const validationResult = this.registryConfigManager.validateEnvironmentVariables(
+            frameworkConfig.envVars,
+            frameworkConfig
+        );
+        
+        // Display validation results
+        if (validationResult.errors && validationResult.errors.length > 0) {
+            console.log('\n❌ Environment Variable Validation Errors:');
+            validationResult.errors.forEach(error => {
+                console.log(`   • ${error.key}: ${error.message}`);
+            });
+            
+            // If skip-prompts is enabled, throw error immediately
+            if (this.options['skip-prompts']) {
+                throw new Error('Environment variable validation failed. Please fix the errors and try again.');
+            }
+            
+            // Require user confirmation to proceed
+            const proceed = await this.prompt([{
+                type: 'confirm',
+                name: 'proceedWithErrors',
+                message: 'Environment variable validation found errors. Proceed anyway?',
+                default: false
+            }]);
+            
+            if (!proceed.proceedWithErrors) {
+                throw new Error('Environment variable validation failed. Please fix the errors and try again.');
+            }
+        }
+        
+        if (validationResult.warnings && validationResult.warnings.length > 0) {
+            console.log('\n⚠️  Environment Variable Validation Warnings:');
+            validationResult.warnings.forEach(warning => {
+                console.log(`   • ${warning.key ? `${warning.key}: ` : ''}${warning.message}`);
+            });
+        }
+        
+        if (validationResult.strategiesUsed && validationResult.strategiesUsed.length > 0) {
+            console.log(`\n✅ Validation methods used: ${validationResult.strategiesUsed.join(', ')}`);
+        }
+        
+        if (!validationResult.errors || validationResult.errors.length === 0) {
+            if (!validationResult.warnings || validationResult.warnings.length === 0) {
+                console.log('   ✅ All environment variables validated successfully');
+            }
+        }
+    }
+
+    /**
+     * Get environment variables in correct order
+     * Preserves dependency order (e.g., CUDA paths before framework variables)
+     * @private
+     * @param {Object} envVars - Environment variables object
+     * @returns {Array<{key: string, value: string}>} Ordered array of env vars
+     */
+    _getOrderedEnvVars(envVars) {
+        const entries = Object.entries(envVars);
+        
+        // Define priority order for environment variable categories
+        const priorities = {
+            // System paths (highest priority)
+            'LD_LIBRARY_PATH': 1,
+            'PATH': 1,
+            'CUDA_HOME': 1,
+            'CUDA_PATH': 1,
+            
+            // CUDA configuration
+            'CUDA_VISIBLE_DEVICES': 2,
+            'NVIDIA_VISIBLE_DEVICES': 2,
+            'NVIDIA_DRIVER_CAPABILITIES': 2,
+            
+            // Framework-specific (medium priority)
+            'VLLM': 3,
+            'TENSORRT': 3,
+            'SGLANG': 3,
+            'TRANSFORMERS': 3,
+            
+            // Application configuration (lower priority)
+            'MAX': 4,
+            'BATCH': 4,
+            'WORKER': 4,
+            'THREAD': 4,
+            
+            // Other variables (lowest priority)
+            'default': 5
+        };
+
+        // Sort entries by priority
+        const sorted = entries.sort(([keyA], [keyB]) => {
+            const priorityA = this._getEnvVarPriority(keyA, priorities);
+            const priorityB = this._getEnvVarPriority(keyB, priorities);
+            
+            if (priorityA !== priorityB) {
+                return priorityA - priorityB;
+            }
+            
+            // If same priority, sort alphabetically
+            return keyA.localeCompare(keyB);
+        });
+
+        // Convert to array of objects for template
+        return sorted.map(([key, value]) => ({ key, value }));
+    }
+
+    /**
+     * Get priority for an environment variable
+     * @private
+     * @param {string} key - Environment variable name
+     * @param {Object} priorities - Priority mapping
+     * @returns {number} Priority value (lower = higher priority)
+     */
+    _getEnvVarPriority(key, priorities) {
+        // Check for exact match first
+        if (priorities[key]) {
+            return priorities[key];
+        }
+
+        // Check for partial matches
+        for (const [pattern, priority] of Object.entries(priorities)) {
+            if (pattern !== 'default' && key.includes(pattern)) {
+                return priority;
+            }
+        }
+
+        // Default priority
+        return priorities.default;
+    }
+
+    /**
+     * Ensure all template variables are initialized with proper defaults
+     * This prevents "undefined" errors in templates
+     * @private
+     */
+    async _ensureTemplateVariables() {
+        // Initialize all template variables with defaults to prevent "undefined" errors
+        const defaults = {
+            chatTemplate: null,
+            chatTemplateSource: null,
+            hfToken: null,
+            envVars: {},
+            inferenceAmiVersion: null,
+            accelerator: null,
+            frameworkVersion: null,
+            validationLevel: 'unknown',
+            configSources: [],
+            recommendedInstanceTypes: []
+        };
+        
+        // Apply defaults for any missing fields
+        Object.entries(defaults).forEach(([key, value]) => {
+            if (this.answers[key] === undefined) {
+                this.answers[key] = value;
+            }
+        });
+        
+        // For transformer models, try to enrich with registry data if available
+        if (this.answers.framework === 'transformers' && this.answers.modelName && this.registryConfigManager) {
+            try {
+                // Fetch HuggingFace data for model-specific info
+                const hfData = await this.registryConfigManager._fetchHuggingFaceData(this.answers.modelName);
+                
+                // Merge chatTemplate if available and not already set
+                if (hfData && hfData.chatTemplate && !this.answers.chatTemplate) {
+                    this.answers.chatTemplate = hfData.chatTemplate;
+                    this.answers.chatTemplateSource = 'HuggingFace_Hub_API';
+                }
+                
+                // Check Model Registry for overrides
+                if (this.registryConfigManager.modelRegistry) {
+                    let modelConfig = this.registryConfigManager.modelRegistry[this.answers.modelName];
+                    
+                    // Try pattern matching if no exact match
+                    if (!modelConfig) {
+                        for (const [pattern, config] of Object.entries(this.registryConfigManager.modelRegistry)) {
+                            if (pattern.includes('*')) {
+                                const regex = new RegExp(`^${pattern.replace(/\*/g, '.*')}$`);
+                                if (regex.test(this.answers.modelName)) {
+                                    modelConfig = config;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Apply model registry overrides
+                    if (modelConfig) {
+                        if (modelConfig.chatTemplate) {
+                            this.answers.chatTemplate = modelConfig.chatTemplate;
+                            this.answers.chatTemplateSource = 'Model_Registry';
+                        }
+                        if (modelConfig.envVars) {
+                            this.answers.envVars = { ...this.answers.envVars, ...modelConfig.envVars };
+                        }
+                    }
+                }
+                
+                // Fetch framework-specific data if frameworkVersion is available
+                if (this.answers.frameworkVersion && this.registryConfigManager.frameworkRegistry) {
+                    const frameworkConfig = this.registryConfigManager.frameworkRegistry[this.answers.framework]?.[this.answers.frameworkVersion];
+                    
+                    if (frameworkConfig) {
+                        // Merge framework environment variables
+                        if (frameworkConfig.envVars) {
+                            this.answers.envVars = { ...frameworkConfig.envVars, ...this.answers.envVars };
+                        }
+                        
+                        // Set inference AMI version
+                        if (frameworkConfig.inferenceAmiVersion) {
+                            this.answers.inferenceAmiVersion = frameworkConfig.inferenceAmiVersion;
+                        }
+                        
+                        // Set accelerator info
+                        if (frameworkConfig.accelerator) {
+                            this.answers.accelerator = frameworkConfig.accelerator;
+                        }
+                    }
+                }
+            } catch (error) {
+                // Silently continue - defaults are already set
+            }
+        }
     }
 
 }

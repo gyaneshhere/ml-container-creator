@@ -5,5 +5,11 @@
 drafts/
 node_modules
 
+# Test output
+test-results.json
+test-output-*
+.nyc_output/
+coverage/
+
 # MkDocs build output
 site/

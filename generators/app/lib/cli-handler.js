@@ -153,16 +153,52 @@ CLI OPTIONS:
   --project-name=<name>       Project name
   --project-dir=<dir>         Output directory path
   --framework=<framework>     ML framework (sklearn|xgboost|tensorflow|transformers)
-  --model-server=<server>     Model server (flask|fastapi|vllm|sglang)
+  --model-name=<name>         HuggingFace model name (for transformers framework)
+  --model-server=<server>     Model server (flask|fastapi|vllm|sglang|tensorrt-llm)
   --model-format=<format>     Model format (depends on framework)
   --include-sample            Include sample model code
   --include-testing           Include test suite
+  --test-types=<types>        Comma-separated test types (local-model-cli,local-model-server,hosted-model-endpoint)
   --deploy-target=<target>    Deployment target (sagemaker|codebuild)
   --codebuild-compute-type=<type> CodeBuild compute type (BUILD_GENERAL1_SMALL|BUILD_GENERAL1_MEDIUM|BUILD_GENERAL1_LARGE)
   --codebuild-project-name=<name> CodeBuild project name
-  --instance-type=<type>      Instance type (cpu-optimized|gpu-enabled)
+  --instance-type=<type>      Instance type (cpu-optimized|gpu-enabled|custom)
+  --custom-instance-type=<type> Custom instance type (e.g., ml.g5.xlarge) when instance-type=custom
   --region=<region>           AWS region
   --role-arn=<arn>            AWS IAM role ARN for SageMaker execution
+  --hf-token=<token>          HuggingFace token (or "$HF_TOKEN" for env var)
+
+VALIDATION OPTIONS:
+  --validate-env-vars         Enable environment variable validation (default: true)
+  --validate-with-docker      Enable Docker introspection validation (default: false, opt-in)
+  --offline                   Disable HuggingFace API lookups (default: false)
+
+REGISTRY SYSTEM:
+  The generator includes built-in registries for frameworks, models, and instance types:
+  
+  Framework Registry:
+    - Provides base images, environment variables, and accelerator requirements
+    - Supports version-specific configurations (e.g., vllm 0.3.0, 0.4.0)
+    - Includes optimization profiles (low-latency, high-throughput)
+    - Validates accelerator compatibility with instance types
+  
+  Model Registry:
+    - Stores model-specific configurations and chat templates
+    - Supports pattern matching (e.g., "meta-llama/Llama-2-*")
+    - Provides recommended instance types per model
+    - Includes validation levels (tested, community-validated, experimental)
+    - Offers model profiles for different deployment scenarios
+  
+  Instance Accelerator Mapping:
+    - Maps AWS instance types to accelerator capabilities
+    - Validates framework-instance compatibility
+    - Provides hardware specifications (GPU type, memory, vCPUs)
+  
+  Registry Features:
+    - Automatic environment variable injection from registries
+    - Chat template detection from HuggingFace Hub or Model Registry
+    - Validation of framework-accelerator-instance compatibility
+    - Inline documentation comments in generated Dockerfiles
 
 ENVIRONMENT VARIABLES:
   ML_INSTANCE_TYPE           Instance type
@@ -171,6 +207,10 @@ ENVIRONMENT VARIABLES:
   AWS_REGION                 AWS region
   AWS_ROLE                   AWS IAM role ARN
   ML_CONTAINER_CREATOR_CONFIG Config file path
+  VALIDATE_ENV_VARS          Enable env var validation (true|false)
+  VALIDATE_WITH_DOCKER       Enable Docker validation (true|false)
+  OFFLINE_MODE               Disable HuggingFace API (true|false)
+  HF_TOKEN                   HuggingFace authentication token
 
 CONFIGURATION FILES (in precedence order):
   1. CLI options (highest precedence)
@@ -178,8 +218,41 @@ CONFIGURATION FILES (in precedence order):
   3. --config file
   4. ml-container.config.json
   5. package.json "ml-container-creator" section
-  6. Generator defaults
-  7. Interactive prompts (lowest precedence)
+  6. Registry defaults (framework/model registries)
+  7. Generator defaults
+  8. Interactive prompts (lowest precedence)
+
+TRANSFORMER MODEL EXAMPLES:
+  # vLLM with Llama-2 7B
+  yo ml-container-creator --framework=transformers \\
+    --model-name=meta-llama/Llama-2-7b-chat-hf \\
+    --model-server=vllm \\
+    --instance-type=gpu-enabled \\
+    --hf-token=$HF_TOKEN \\
+    --skip-prompts
+
+  # TensorRT-LLM with custom model
+  yo ml-container-creator --framework=transformers \\
+    --model-name=openai/gpt-oss-20b \\
+    --model-server=tensorrt-llm \\
+    --instance-type=custom \\
+    --custom-instance-type=ml.g6.12xlarge \\
+    --skip-prompts
+
+  # SGLang with Mistral
+  yo ml-container-creator --framework=transformers \\
+    --model-name=mistralai/Mistral-7B-Instruct-v0.2 \\
+    --model-server=sglang \\
+    --instance-type=gpu-enabled \\
+    --skip-prompts
+
+REGISTRY CONTRIBUTION:
+  To contribute to the registries:
+  - Framework Registry: generators/app/config/registries/frameworks.js
+  - Model Registry: generators/app/config/registries/models.js
+  - Instance Mapping: generators/app/config/registries/instance-accelerator-mapping.js
+  
+  See docs/REGISTRY_CONTRIBUTION_GUIDE.md for detailed contribution guidelines.
 
 For more information, visit: https://github.com/awslabs/ml-container-creator
 `);
@@ -338,9 +411,28 @@ yo ml-container-creator my-sklearn-project \\
 # Transformers project with vLLM
 yo ml-container-creator my-llm-project \\
   --framework=transformers \\
+  --model-name=meta-llama/Llama-2-7b-chat-hf \\
   --model-server=vllm \\
   --instance-type=gpu-enabled \\
+  --hf-token=$HF_TOKEN \\
   --region=us-east-1 \\
+  --skip-prompts
+
+# TensorRT-LLM with custom instance type
+yo ml-container-creator my-tensorrt-project \\
+  --framework=transformers \\
+  --model-name=openai/gpt-oss-20b \\
+  --model-server=tensorrt-llm \\
+  --instance-type=custom \\
+  --custom-instance-type=ml.g6.12xlarge \\
+  --skip-prompts
+
+# SGLang with Mistral model
+yo ml-container-creator my-sglang-project \\
+  --framework=transformers \\
+  --model-name=mistralai/Mistral-7B-Instruct-v0.2 \\
+  --model-server=sglang \\
+  --instance-type=gpu-enabled \\
   --skip-prompts
 
 # XGBoost with FastAPI and custom role
@@ -365,6 +457,16 @@ yo ml-container-creator my-codebuild-project \\
 
 # Using configuration file
 yo ml-container-creator --config=production.json --skip-prompts
+
+# With validation options
+yo ml-container-creator \\
+  --framework=transformers \\
+  --model-name=meta-llama/Llama-2-7b-chat-hf \\
+  --model-server=vllm \\
+  --validate-env-vars=true \\
+  --validate-with-docker=false \\
+  --offline=false \\
+  --skip-prompts
 `);
     }
 

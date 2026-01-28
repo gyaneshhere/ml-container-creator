@@ -13,16 +13,19 @@
     "docker"
   ],
   "scripts": {
-    "test": "mocha test/**/*.test.js",
-    "test:ci": "mocha test/**/*.test.js",
-    "test:watch": "mocha test/**/*.test.js --watch",
-    "test:coverage": "nyc mocha test/**/*.test.js",
-    "test:property": "mocha test/**/*.property.test.js",
-    "test:property:watch": "mocha test/**/*.property.test.js --watch",
-    "test:all": "npm run test && npm run test:property",
+    "test": "VALIDATE_ENV_VARS=false mocha test/**/*.test.js --reporter test/reporters/progress-reporter.cjs",
+    "test:ci": "VALIDATE_ENV_VARS=false mocha test/**/*.test.js --reporter spec",
+    "test:verbose": "VALIDATE_ENV_VARS=false mocha test/**/*.test.js --reporter spec",
+    "test:minimal": "VALIDATE_ENV_VARS=false mocha test/**/*.test.js --reporter test/reporters/minimal-reporter.cjs",
+    "test:watch": "VALIDATE_ENV_VARS=false mocha test/**/*.test.js --watch --reporter test/reporters/progress-reporter.cjs",
+    "test:coverage": "VALIDATE_ENV_VARS=false nyc mocha test/**/*.test.js",
+    "test:unit": "VALIDATE_ENV_VARS=false mocha test/unit/**/*.test.js test/helpers/**/*.test.js --reporter spec",
+    "test:integration": "VALIDATE_ENV_VARS=false mocha test/input-parsing-and-generation/**/*.test.js --reporter spec",
+    "test:property": "VALIDATE_ENV_VARS=false mocha test/property/**/*.test.js --reporter spec",
+    "test:all": "npm run test:ci",
+    "test:perf": "VALIDATE_ENV_VARS=false mocha test/**/*.test.js --reporter json > test-results.json && node scripts/analyze-test-performance.js",
     "security-audit": "npm audit --audit-level=high",
     "security-fix": "npm audit fix",
-    "pretest": "npm run security-audit",
     "lint": "eslint generators/**/*.js test/**/*.js",
     "lint:fix": "eslint generators/**/*.js test/**/*.js --fix",
     "start": "yo ml-container-creator",
@@ -32,8 +35,10 @@
   },
   "dependencies": {
     "@microsoft/eslint-formatter-sarif": "^3.1.0",
+    "ajv": "^8.12.0",
     "license-report": "^6.8.0",
     "lodash": "^4.17.21",
+    "sbom": "^0.0.0",
     "yeoman-generator": "^7.5.1",
     "yosay": "^3.0.0"
   },
@@ -89,7 +94,7 @@
     "semver-regex": "4.0.5"
   },
   "author": "Dan Ferguson",
-  "license": "MIT-0",
+  "license": "Apache-2.0",
   "private": true,
   "peerDependencies": {
     "yo": "^1.4.2"

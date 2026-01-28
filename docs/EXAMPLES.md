@@ -8,10 +8,9 @@ This guide provides step-by-step examples for common use cases.
 - [Example 2: Deploy an XGBoost Model](#example-2-deploy-an-xgboost-model)
 - [Example 3: Deploy a TensorFlow Model](#example-3-deploy-a-tensorflow-model)
 - [Example 4: Deploy a Transformer Model (LLM)](#example-4-deploy-a-transformer-model-llm)
-- [Example 5: Deploy with CodeBuild CI/CD](#example-5-deploy-with-codebuild-cicd)
-- [Example 6: Deploy a Transformer Model with TensorRT-LLM](#example-6-deploy-a-transformer-model-with-tensorrt-llm)
+- [Example 5: Deploy a Transformer Model with TensorRT-LLM](#example-5-deploy-a-transformer-model-with-tensorrt-llm)
+- [Example 6: Deploy with CodeBuild CI/CD](#example-6-deploy-with-codebuild-cicd)
 - [Example 7: Custom Instance Types](#example-7-custom-instance-types)
-- [Example 8: Custom Configuration](#example-8-custom-configuration)
 
 ---
 
@@ -338,7 +337,7 @@ cat output.json
 
 ---
 
-## Example 6: Deploy a Transformer Model with TensorRT-LLM
+## Example 5: Deploy a Transformer Model with TensorRT-LLM
 
 ### Scenario
 You want to deploy a Large Language Model using NVIDIA's TensorRT-LLM for optimized inference performance on NVIDIA GPUs.
@@ -743,7 +742,7 @@ TensorRT-LLM deployments use GPU instances:
 
 ---
 
-## Example 7: Deploy with CodeBuild CI/CD
+## Example 6: Deploy with CodeBuild CI/CD
 
 ### Scenario
 You want to set up an enterprise-ready CI/CD pipeline using AWS CodeBuild for automated Docker image building and deployment.
@@ -887,7 +886,7 @@ aws sts get-caller-identity
 
 ---
 
-## Example 8: Custom Instance Types
+## Example 7: Custom Instance Types
 
 ### Scenario
 You want to optimize costs and performance by using specific AWS instance types for different deployment scenarios.

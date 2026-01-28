@@ -2,6 +2,14 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+<% if (comments && comments.header) { %>
+<%= comments.header %>
+<% } %>
+
+<% if (comments && comments.configSource) { %>
+<%= comments.configSource %>
+<% } %>
+
 # Exit on any error
 set -e
 
@@ -41,6 +49,11 @@ TIMESTAMP=$(date +%s)
 MODEL_NAME="${IMAGE_NAME}-model-${TIMESTAMP}"
 ENDPOINT_CONFIG_NAME="${IMAGE_NAME}-endpoint-config-${TIMESTAMP}"
 ENDPOINT_NAME="${IMAGE_NAME}-endpoint-${TIMESTAMP}"
+
+<% if (comments && comments.instanceType) { %>
+<%= comments.instanceType %>
+<% } %>
+
 <% if (instanceType === 'cpu-optimized') { %>INSTANCE_TYPE="ml.m6g.large"
 <% } else if (instanceType === 'gpu-enabled' && framework === 'transformers' && modelServer === 'tensorrt-llm') { %>INSTANCE_TYPE="ml.g5.12xlarge"
 <% } else if (instanceType === 'gpu-enabled' && framework === 'transformers') { %>INSTANCE_TYPE="ml.g6.12xlarge"
@@ -85,7 +98,18 @@ aws sagemaker create-model \
 
 # Create endpoint configuration
 echo "Creating endpoint configuration: ${ENDPOINT_CONFIG_NAME}"
-<% if (framework === 'transformers' && modelServer === 'tensorrt-llm') { %>
+
+<% if (comments && comments.amiVersion) { %>
+<%= comments.amiVersion %>
+<% } %>
+
+<% if (inferenceAmiVersion) { %>
+# Using configured InferenceAmiVersion from registry
+aws sagemaker create-endpoint-config \
+    --endpoint-config-name ${ENDPOINT_CONFIG_NAME} \
+    --production-variants VariantName=primary,ModelName=${MODEL_NAME},InitialInstanceCount=1,InstanceType=${INSTANCE_TYPE},InitialVariantWeight=1,InferenceAmiVersion=<%= inferenceAmiVersion %> \
+    --region ${AWS_REGION}
+<% } else if (framework === 'transformers' && modelServer === 'tensorrt-llm') { %>
 # Use newest AMI version for TensorRT-LLM to ensure latest CUDA driver compatibility
 aws sagemaker create-endpoint-config \
     --endpoint-config-name ${ENDPOINT_CONFIG_NAME} \

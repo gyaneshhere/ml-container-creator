@@ -10,8 +10,11 @@
 
 import {
     frameworkPrompts,
+    frameworkVersionPrompts,
+    frameworkProfilePrompts,
     modelFormatPrompts,
     modelServerPrompts,
+    modelProfilePrompts,
     hfTokenPrompts,
     modulePrompts,
     infrastructurePrompts,
@@ -41,10 +44,66 @@ export default class PromptRunner {
         // Phase 1: Core Configuration (framework first)
         console.log('\n🔧 Core Configuration');
         const frameworkAnswers = await this._runPhase(frameworkPrompts, {}, explicitConfig, existingConfig);
-        const modelFormatAnswers = await this._runPhase(modelFormatPrompts, frameworkAnswers, explicitConfig, existingConfig);
-        const modelServerAnswers = await this._runPhase(modelServerPrompts, frameworkAnswers, explicitConfig, existingConfig);
+        
+        // Populate framework version choices from registry
+        const frameworkVersionChoices = this._getFrameworkVersionChoices(frameworkAnswers.framework);
+        const frameworkVersionAnswers = await this._runPhase(
+            frameworkVersionPrompts, 
+            {...frameworkAnswers, _frameworkVersionChoices: frameworkVersionChoices}, 
+            explicitConfig, 
+            existingConfig
+        );
+        
+        // Display validation information if version was selected
+        if (frameworkVersionAnswers.frameworkVersion) {
+            this._displayFrameworkValidationInfo(frameworkAnswers.framework, frameworkVersionAnswers.frameworkVersion);
+        }
+        
+        // Populate framework profile choices from registry
+        const frameworkProfileChoices = this._getFrameworkProfileChoices(
+            frameworkAnswers.framework, 
+            frameworkVersionAnswers.frameworkVersion
+        );
+        const frameworkProfileAnswers = await this._runPhase(
+            frameworkProfilePrompts,
+            {...frameworkAnswers, ...frameworkVersionAnswers, _frameworkProfileChoices: frameworkProfileChoices},
+            explicitConfig,
+            existingConfig
+        );
+        
+        const modelFormatAnswers = await this._runPhase(
+            modelFormatPrompts, 
+            {...frameworkAnswers, ...frameworkVersionAnswers, ...frameworkProfileAnswers}, 
+            explicitConfig, 
+            existingConfig
+        );
+        const modelServerAnswers = await this._runPhase(
+            modelServerPrompts, 
+            {...frameworkAnswers, ...frameworkVersionAnswers, ...frameworkProfileAnswers}, 
+            explicitConfig, 
+            existingConfig
+        );
+        
+        // Populate model profile choices from registry (if model ID is available)
+        const currentAnswers = {...frameworkAnswers, ...frameworkVersionAnswers, ...frameworkProfileAnswers, ...modelFormatAnswers, ...modelServerAnswers};
+        const modelId = currentAnswers.customModelName || currentAnswers.modelName;
+        
+        // Fetch model information from HuggingFace and Model Registry
+        // Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.11, 11.1, 11.2, 11.3, 11.5, 11.6, 11.7
+        if (modelId && modelId !== 'Custom (enter manually)') {
+            await this._fetchAndDisplayModelInfo(modelId);
+        }
+        
+        const modelProfileChoices = this._getModelProfileChoices(modelId);
+        const modelProfileAnswers = await this._runPhase(
+            modelProfilePrompts,
+            {...currentAnswers, _modelProfileChoices: modelProfileChoices},
+            explicitConfig,
+            existingConfig
+        );
+        
         const hfTokenAnswers = await this._runPhase(hfTokenPrompts, 
-            { ...frameworkAnswers, ...modelFormatAnswers, ...modelServerAnswers }, 
+            { ...frameworkAnswers, ...frameworkVersionAnswers, ...frameworkProfileAnswers, ...modelFormatAnswers, ...modelServerAnswers, ...modelProfileAnswers }, 
             explicitConfig, existingConfig);
 
         // Phase 2: Module Selection
@@ -59,6 +118,17 @@ export default class PromptRunner {
         // Phase 3: Infrastructure & Performance
         console.log('\n💪 Infrastructure & Performance');
         const infraAnswers = await this._runPhase(infrastructurePrompts, frameworkAnswers, explicitConfig, existingConfig);
+
+        // Validate instance type against framework requirements
+        // Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
+        const instanceType = infraAnswers.customInstanceType || this._getDefaultInstanceType(infraAnswers.instanceType);
+        if (instanceType && frameworkVersionAnswers.frameworkVersion) {
+            await this._validateAndDisplayInstanceType(
+                instanceType,
+                frameworkAnswers.framework,
+                frameworkVersionAnswers.frameworkVersion
+            );
+        }
 
         // Show warning for SageMaker deployment target
         if (infraAnswers.deployTarget === 'sagemaker') {
@@ -89,8 +159,11 @@ export default class PromptRunner {
         // Combine all answers
         const combinedAnswers = {
             ...frameworkAnswers,
+            ...frameworkVersionAnswers,
+            ...frameworkProfileAnswers,
             ...modelFormatAnswers,
             ...modelServerAnswers,
+            ...modelProfileAnswers,
             ...hfTokenAnswers,
             ...moduleAnswers,
             ...infraAnswers,
@@ -191,6 +264,323 @@ export default class PromptRunner {
         console.log('\t ./build_and_push.sh -- Builds the image and pushes to ECR.');
         console.log('\t ./deploy.sh -- Deploys the image to a SageMaker AI Managed Inference Endpoint.');
         console.log('\t\t deploy.sh needs a valid IAM Role ARN as a parameter.');
+    }
+
+    /**
+     * Get framework version choices from registry
+     * Requirements: 2.1, 2.6, 8.2, 8.3
+     * @private
+     */
+    _getFrameworkVersionChoices(framework) {
+        const registryConfigManager = this.generator.registryConfigManager;
+        
+        if (!registryConfigManager || !registryConfigManager.frameworkRegistry) {
+            return [];
+        }
+        
+        const frameworkVersions = registryConfigManager.frameworkRegistry[framework];
+        if (!frameworkVersions || Object.keys(frameworkVersions).length === 0) {
+            return [];
+        }
+        
+        // Get available versions and sort them
+        const versions = Object.keys(frameworkVersions).sort((a, b) => {
+            // Simple version comparison (can be enhanced with semver)
+            return b.localeCompare(a, undefined, { numeric: true });
+        });
+        
+        // Create choices with validation level indicators
+        return versions.map(version => {
+            const config = frameworkVersions[version];
+            const validationLevel = config.validationLevel || 'unknown';
+            const indicator = {
+                'tested': '✅',
+                'community-validated': '👥',
+                'experimental': '🧪',
+                'unknown': '❓'
+            }[validationLevel] || '❓';
+            
+            return {
+                name: `${version} ${indicator} (${validationLevel})`,
+                value: version,
+                short: version
+            };
+        });
+    }
+
+    /**
+     * Display framework validation information
+     * Requirements: 2.6, 8.2, 8.3
+     * @private
+     */
+    _displayFrameworkValidationInfo(framework, version) {
+        const registryConfigManager = this.generator.registryConfigManager;
+        
+        if (!registryConfigManager || !registryConfigManager.frameworkRegistry) {
+            return;
+        }
+        
+        const config = registryConfigManager.frameworkRegistry[framework]?.[version];
+        if (!config) {
+            return;
+        }
+        
+        console.log('\n📋 Framework Configuration:');
+        console.log(`   • Framework: ${framework} ${version}`);
+        console.log(`   • Validation Level: ${config.validationLevel || 'unknown'}`);
+        console.log(`   • Source: Framework_Registry`);
+        
+        if (config.accelerator) {
+            console.log(`   • Accelerator: ${config.accelerator.type} ${config.accelerator.version || 'any'}`);
+        }
+        
+        if (config.recommendedInstanceTypes && config.recommendedInstanceTypes.length > 0) {
+            console.log(`   • Recommended Instances: ${config.recommendedInstanceTypes.slice(0, 3).join(', ')}`);
+        }
+        
+        if (config.notes) {
+            console.log(`   • Notes: ${config.notes}`);
+        }
+    }
+
+    /**
+     * Get framework profile choices from registry
+     * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.10
+     * @private
+     */
+    _getFrameworkProfileChoices(framework, version) {
+        const registryConfigManager = this.generator.registryConfigManager;
+        
+        if (!registryConfigManager || !registryConfigManager.frameworkRegistry) {
+            return [];
+        }
+        
+        const config = registryConfigManager.frameworkRegistry[framework]?.[version];
+        if (!config || !config.profiles || Object.keys(config.profiles).length === 0) {
+            return [];
+        }
+        
+        // Create choices from profiles
+        const choices = Object.entries(config.profiles).map(([profileName, profileConfig]) => {
+            return {
+                name: `${profileConfig.displayName || profileName} - ${profileConfig.description || 'No description'}`,
+                value: profileName,
+                short: profileConfig.displayName || profileName
+            };
+        });
+        
+        // Add "default" option to skip profile selection
+        choices.unshift({
+            name: 'Default (no profile)',
+            value: null,
+            short: 'Default'
+        });
+        
+        return choices;
+    }
+
+    /**
+     * Get model profile choices from registry
+     * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.10
+     * @private
+     */
+    _getModelProfileChoices(modelId) {
+        const registryConfigManager = this.generator.registryConfigManager;
+        
+        if (!registryConfigManager || !registryConfigManager.modelRegistry || !modelId) {
+            return [];
+        }
+        
+        // Try to find model in registry (exact match or pattern match)
+        let modelConfig = registryConfigManager.modelRegistry[modelId];
+        
+        // If no exact match, try pattern matching
+        if (!modelConfig) {
+            for (const [pattern, config] of Object.entries(registryConfigManager.modelRegistry)) {
+                if (pattern.includes('*')) {
+                    const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+                    if (regex.test(modelId)) {
+                        modelConfig = config;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if (!modelConfig || !modelConfig.profiles || Object.keys(modelConfig.profiles).length === 0) {
+            return [];
+        }
+        
+        // Create choices from profiles
+        const choices = Object.entries(modelConfig.profiles).map(([profileName, profileConfig]) => {
+            return {
+                name: `${profileConfig.displayName || profileName} - ${profileConfig.description || 'No description'}`,
+                value: profileName,
+                short: profileConfig.displayName || profileName
+            };
+        });
+        
+        // Add "default" option to skip profile selection
+        choices.unshift({
+            name: 'Default (no profile)',
+            value: null,
+            short: 'Default'
+        });
+        
+        return choices;
+    }
+
+    /**
+     * Fetch and display model information from HuggingFace API and Model Registry
+     * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.11, 11.1, 11.2, 11.3, 11.5, 11.6, 11.7
+     * @private
+     */
+    async _fetchAndDisplayModelInfo(modelId) {
+        const registryConfigManager = this.generator.registryConfigManager;
+        
+        if (!registryConfigManager) {
+            return;
+        }
+        
+        console.log(`\n🔍 Fetching model information for: ${modelId}`);
+        
+        const sources = [];
+        let chatTemplate = null;
+        let modelFamily = null;
+        
+        // Try HuggingFace API first
+        try {
+            const hfData = await registryConfigManager._fetchHuggingFaceData(modelId);
+            if (hfData) {
+                sources.push('HuggingFace_Hub_API');
+                if (hfData.chatTemplate) {
+                    chatTemplate = hfData.chatTemplate;
+                }
+                console.log('   ✅ Found on HuggingFace Hub');
+            } else {
+                console.log('   ℹ️  Not found on HuggingFace Hub (may be private or offline)');
+            }
+        } catch (error) {
+            console.log('   ⚠️  HuggingFace API unavailable');
+        }
+        
+        // Check Model Registry for overrides
+        if (registryConfigManager.modelRegistry) {
+            let modelConfig = registryConfigManager.modelRegistry[modelId];
+            
+            // Try pattern matching if no exact match
+            if (!modelConfig) {
+                for (const [pattern, config] of Object.entries(registryConfigManager.modelRegistry)) {
+                    if (pattern.includes('*')) {
+                        const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+                        if (regex.test(modelId)) {
+                            modelConfig = config;
+                            console.log(`   ✅ Matched pattern in Model_Registry: ${pattern}`);
+                            break;
+                        }
+                    }
+                }
+            } else {
+                console.log('   ✅ Found in Model_Registry');
+            }
+            
+            if (modelConfig) {
+                sources.push('Model_Registry');
+                if (modelConfig.chatTemplate) {
+                    chatTemplate = modelConfig.chatTemplate; // Model registry overrides HF
+                }
+                if (modelConfig.family) {
+                    modelFamily = modelConfig.family;
+                }
+            }
+        }
+        
+        // Display information
+        if (sources.length > 0) {
+            console.log('\n📋 Model Information:');
+            console.log(`   • Model ID: ${modelId}`);
+            if (modelFamily) {
+                console.log(`   • Family: ${modelFamily}`);
+            }
+            if (chatTemplate) {
+                console.log('   • Chat Template: ✅ Available');
+                console.log('     (Will be injected into generated files)');
+            } else {
+                console.log('   • Chat Template: ❌ Not available');
+                console.log('     (Chat endpoints may require manual configuration)');
+            }
+            console.log(`   • Sources: ${sources.join(', ')}`);
+        } else {
+            console.log('   ℹ️  No additional model information available');
+            console.log('   Proceeding with default configuration');
+        }
+    }
+
+    /**
+     * Get default instance type from instance type choice
+     * @private
+     */
+    _getDefaultInstanceType(instanceTypeChoice) {
+        const mapping = {
+            'cpu-optimized': 'ml.m6g.large',
+            'gpu-enabled': 'ml.g5.xlarge'
+        };
+        return mapping[instanceTypeChoice] || instanceTypeChoice;
+    }
+
+    /**
+     * Validate and display instance type compatibility
+     * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
+     * @private
+     */
+    async _validateAndDisplayInstanceType(instanceType, framework, version) {
+        const registryConfigManager = this.generator.registryConfigManager;
+        
+        if (!registryConfigManager) {
+            return;
+        }
+        
+        // Get framework configuration
+        const frameworkConfig = registryConfigManager.frameworkRegistry?.[framework]?.[version];
+        if (!frameworkConfig) {
+            return; // No framework config, skip validation
+        }
+        
+        console.log(`\n🔍 Validating instance type: ${instanceType}`);
+        
+        // Validate instance type
+        const validationResult = registryConfigManager.validateInstanceType(instanceType, frameworkConfig);
+        
+        if (validationResult.compatible) {
+            console.log('   ✅ Instance type is compatible');
+            if (validationResult.info) {
+                console.log(`   ℹ️  ${validationResult.info}`);
+            }
+        } else {
+            console.log('   ❌ Instance type compatibility issue detected');
+            if (validationResult.error) {
+                console.log(`   Error: ${validationResult.error}`);
+            }
+            if (validationResult.recommendations && validationResult.recommendations.length > 0) {
+                console.log(`   💡 Recommended instances: ${validationResult.recommendations.join(', ')}`);
+            }
+            
+            // Ask user if they want to proceed
+            const proceed = await this.generator.prompt([{
+                type: 'confirm',
+                name: 'proceedWithIncompatible',
+                message: 'Instance type may not be compatible. Proceed anyway?',
+                default: false
+            }]);
+            
+            if (!proceed.proceedWithIncompatible) {
+                throw new Error('Instance type validation failed. Please select a compatible instance type.');
+            }
+        }
+        
+        if (validationResult.warning) {
+            console.log(`   ⚠️  Warning: ${validationResult.warning}`);
+        }
     }
 }
 

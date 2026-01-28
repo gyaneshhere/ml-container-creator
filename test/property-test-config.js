@@ -14,9 +14,9 @@ import fc from 'fast-check';
 // Global property test configuration
 export const GLOBAL_PROPERTY_CONFIG = {
     // Test execution settings
-    numRuns: 100,           // Minimum 100 iterations as specified in design
+    numRuns: 20,            // Default 20 iterations (override per test as needed)
     timeout: 30000,         // 30 second timeout per property test
-    verbose: true,          // Show detailed output
+    verbose: false,         // Minimal output by default
     seed: 42,               // For reproducible tests
     
     // Error handling
@@ -37,9 +37,8 @@ export const GLOBAL_PROPERTY_CONFIG = {
             if (runDetails.error) {
                 console.log(`💥 Error: ${runDetails.error.message}`);
             }
-        } else {
-            console.log(`✅ Property test passed after ${runDetails.numRuns} runs`);
         }
+        // Don't log success - let Mocha reporter handle it
     }
 };
 

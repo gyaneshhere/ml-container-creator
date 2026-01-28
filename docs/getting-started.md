@@ -445,7 +445,7 @@ For complete configuration documentation, see the [Configuration Guide](configur
 - [Deploy an XGBoost Model](EXAMPLES.md#example-2-deploy-an-xgboost-model)
 - [Deploy a TensorFlow Model](EXAMPLES.md#example-3-deploy-a-tensorflow-model)
 - [Deploy a Transformer Model with vLLM](EXAMPLES.md#example-4-deploy-a-transformer-model-llm)
-- [Deploy a Transformer Model with TensorRT-LLM](EXAMPLES.md#example-6-deploy-a-transformer-model-with-tensorrt-llm)
+- [Deploy a Transformer Model with TensorRT-LLM](EXAMPLES.md#example-5-deploy-a-transformer-model-with-tensorrt-llm)
 
 ### Advanced Topics
 - [Adding New Features](ADDING_FEATURES.md) - Contribute to the project

@@ -1,5 +1,14 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
+
+<% if (comments && comments.acceleratorInfo) { %>
+<%= comments.acceleratorInfo %>
+<% } %>
+
+<% if (comments && comments.validationInfo) { %>
+<%= comments.validationInfo %>
+<% } %>
+
 <% if (framework !== 'transformers') { %>
 FROM python:3.12-slim
 
@@ -67,17 +76,43 @@ COPY sample_model/ /opt/ml/sample_model/
 # COPY your_model_files /opt/ml/model/
 <% } %>
 
+<% if (comments && comments.envVarExplanations && Object.keys(comments.envVarExplanations).length > 0) { %>
+# Environment Variables Configuration
+<% for (const [category, comment] of Object.entries(comments.envVarExplanations)) { %>
+<%= comment %>
+<% } %>
+<% } %>
+
 # Set environment variables for SageMaker
 ENV PYTHONPATH=/opt/ml/code
 ENV SAGEMAKER_BIND_TO_PORT=8080
 
+<% if (orderedEnvVars && orderedEnvVars.length > 0) { %>
+# Additional environment variables from configuration
+<% orderedEnvVars.forEach(({ key, value }) => { %>
+ENV <%= key %>=<%= value %>
+<% }); %>
+<% } %>
+
 # Expose port 8080 for SageMaker inference
 EXPOSE 8080
+
+<% if (comments && comments.troubleshooting) { %>
+<%= comments.troubleshooting %>
+<% } %>
 
 # Set the inference script as the entry point
 RUN chmod +x code/start_server.py
 ENTRYPOINT ["python", "/opt/ml/code/start_server.py"]
 <% } else { %>
+<% if (comments && comments.acceleratorInfo) { %>
+<%= comments.acceleratorInfo %>
+<% } %>
+
+<% if (comments && comments.validationInfo) { %>
+<%= comments.validationInfo %>
+<% } %>
+
 <% if (modelServer === 'vllm') { %>
 # https://github.com/aws-samples/sagemaker-genai-hosting-examples/tree/main/OpenAI/gpt-oss/deploy/docker
 ARG BASE_IMAGE=vllm/vllm-openai:v0.10.1
@@ -96,6 +131,10 @@ ARG BASE_IMAGE=nvcr.io/nvidia/tensorrt-llm/release:1.2.0rc8
 <% } %>
 
 FROM ${BASE_IMAGE}
+
+<% if (comments && comments.chatTemplate) { %>
+<%= comments.chatTemplate %>
+<% } %>
 
 # Set the model name for the transformer model
 <% if (modelServer === 'vllm') { %>
@@ -122,6 +161,26 @@ ENV NCCL_P2P_DISABLE=1
 ENV HF_TOKEN="<%= hfToken %>"
 <% } %>
 
+<% if (chatTemplate) { %>
+# Chat template configuration
+# This template formats chat messages for the model
+ENV CHAT_TEMPLATE="<%= chatTemplate %>"
+<% } %>
+
+<% if (comments && comments.envVarExplanations && Object.keys(comments.envVarExplanations).length > 0) { %>
+# Environment Variables Configuration
+<% for (const [category, comment] of Object.entries(comments.envVarExplanations)) { %>
+<%= comment %>
+<% } %>
+<% } %>
+
+<% if (orderedEnvVars && orderedEnvVars.length > 0) { %>
+# Additional environment variables from configuration
+<% orderedEnvVars.forEach(({ key, value }) => { %>
+ENV <%= key %>=<%= value %>
+<% }); %>
+<% } %>
+
 <% if (modelServer === 'tensorrt-llm') { %>
 # Install nginx and curl for reverse proxy and health checks
 RUN apt-get update && \
@@ -143,6 +202,10 @@ ENTRYPOINT [ "/usr/bin/start_server.sh" ]
 <% } else { %>
 COPY code/serve /usr/bin/serve
 RUN chmod 777 /usr/bin/serve
+
+<% if (comments && comments.troubleshooting) { %>
+<%= comments.troubleshooting %>
+<% } %>
 
 ENTRYPOINT [ "/usr/bin/serve" ]
 <% } %>

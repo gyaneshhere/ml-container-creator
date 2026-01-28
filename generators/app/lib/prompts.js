@@ -51,6 +51,46 @@ const frameworkPrompts = [
     }
 ];
 
+/**
+ * Framework version selection prompts (for registry system)
+ * Requirements: 2.1, 2.6, 8.2, 8.3
+ */
+const frameworkVersionPrompts = [
+    {
+        type: 'list',
+        name: 'frameworkVersion',
+        message: (answers) => `Which version of ${answers.framework} are you using?`,
+        choices: (answers) => {
+            // Choices will be populated by PromptRunner with registry data
+            return answers._frameworkVersionChoices || [];
+        },
+        when: (answers) => {
+            // Only show if we have version choices available
+            return answers._frameworkVersionChoices && answers._frameworkVersionChoices.length > 0;
+        }
+    }
+];
+
+/**
+ * Framework profile selection prompts (for registry system)
+ * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.10
+ */
+const frameworkProfilePrompts = [
+    {
+        type: 'list',
+        name: 'frameworkProfile',
+        message: 'Select a framework configuration profile:',
+        choices: (answers) => {
+            // Choices will be populated by PromptRunner with registry data
+            return answers._frameworkProfileChoices || [];
+        },
+        when: (answers) => {
+            // Only show if we have profile choices available
+            return answers._frameworkProfileChoices && answers._frameworkProfileChoices.length > 0;
+        }
+    }
+];
+
 const modelFormatPrompts = [
     {
         type: 'list',
@@ -107,6 +147,26 @@ const modelServerPrompts = [
                 return ['vllm', 'sglang', 'tensorrt-llm'];
             }
             return ['flask', 'fastapi'];
+        }
+    }
+];
+
+/**
+ * Model profile selection prompts (for registry system)
+ * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.10
+ */
+const modelProfilePrompts = [
+    {
+        type: 'list',
+        name: 'modelProfile',
+        message: 'Select a model configuration profile:',
+        choices: (answers) => {
+            // Choices will be populated by PromptRunner with registry data
+            return answers._modelProfileChoices || [];
+        },
+        when: (answers) => {
+            // Only show if we have profile choices available
+            return answers._modelProfileChoices && answers._modelProfileChoices.length > 0;
         }
     }
 ];
@@ -343,8 +403,11 @@ const destinationPrompts = [
 
 export {
     frameworkPrompts,
+    frameworkVersionPrompts,
+    frameworkProfilePrompts,
     modelFormatPrompts,
     modelServerPrompts,
+    modelProfilePrompts,
     hfTokenPrompts,
     modulePrompts,
     infrastructurePrompts,

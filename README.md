@@ -30,12 +30,31 @@ Every generated project includes:
 - **Sample model and training code** to illustrate the deployment
 - **AWS deployment scripts** for ECR and SageMaker
 - **Multi-framework support** (sklearn, XGBoost, TensorFlow, vLLM, SGLang, TensorRT-LLM)
+- **🆕 Intelligent configuration system** with community-validated settings
+  - Framework Registry: Pre-configured settings for framework versions
+  - Model Registry: Model-specific optimizations and overrides
+  - HuggingFace Hub integration: Automatic model metadata fetching
+- **🆕 Accelerator compatibility validation** (CUDA, Neuron SDK, CPU, ROCm)
+  - Automatic instance type validation against framework requirements
+  - Version compatibility checking for accelerator drivers
+  - Clear error messages with recommended alternatives
+- **🆕 Configuration profiles** for different optimization strategies
+  - Low-latency vs high-throughput profiles
+  - Single-GPU vs multi-GPU configurations
+  - Framework and model-specific optimizations
+- **🆕 Environment variable validation** to catch configuration errors early
+  - Known flags validation against framework specifications
+  - Type and range constraint checking
+  - Deprecated flag warnings with suggested replacements
 
 > **Note**: This tool generates starter code. Review and customize for your production requirements.
 
 ## Prerequisites
 
 Before you begin, ensure you have:
+- **Node.js v24+** (required for development and testing)
+  - Check version: `node --version`
+  - Use nvm: `nvm use node` to switch to latest version
 - An AWS account with SageMaker access
 - Basic familiarity with Docker and command line
 - A trained machine learning model ready for deployment
@@ -84,6 +103,89 @@ cd my-model
 - **Build Monitoring**: Real-time build status and progress tracking
 - **Compute Options**: Small, Medium, or Large compute types for different project sizes
 - **Comprehensive Logging**: CloudWatch integration for build logs and debugging
+
+## 🎯 Intelligent Configuration System
+
+ML Container Creator includes a powerful multi-registry configuration system that provides:
+
+### Framework Registry
+Pre-configured, tested settings for transformer serving frameworks:
+- **Base images** and environment variables for each framework version
+- **Accelerator requirements** (CUDA versions, Neuron SDK versions)
+- **SageMaker AMI versions** matched to accelerator requirements
+- **Recommended instance types** for optimal performance
+- **Validation levels** indicating how well-tested each configuration is
+
+### Model Registry
+Model-specific optimizations and overrides:
+- **Chat templates** for conversational models
+- **Framework compatibility** information
+- **Known issues** and workarounds
+- **Pattern matching** for model families (e.g., `mistral*` matches all Mistral variants)
+
+### HuggingFace Hub Integration
+Automatic fetching of model metadata:
+- **Tokenizer configurations** including chat templates
+- **Model architectures** and requirements
+- **Graceful fallback** when API is unavailable
+- **Offline mode** for air-gapped environments
+
+### Configuration Profiles
+Choose optimization strategies for your use case:
+- **Low-latency profiles**: Optimized for single-request response time
+- **High-throughput profiles**: Optimized for batch processing
+- **Single-GPU vs multi-GPU**: Different tensor parallelism settings
+- **Framework-specific profiles**: vLLM, TensorRT-LLM, SGLang optimizations
+
+### Accelerator Compatibility Validation
+Automatic validation of hardware compatibility:
+- **Type matching**: Ensures framework accelerator type (CUDA/Neuron/CPU/ROCm) matches instance
+- **Version checking**: Validates accelerator driver versions
+- **AMI compatibility**: Verifies SageMaker AMI provides required drivers
+- **Clear recommendations**: Suggests compatible instance types when mismatches detected
+
+### Environment Variable Validation
+Catch configuration errors before deployment:
+- **Known flags validation**: Checks against framework specifications
+- **Type constraints**: Validates integer, float, string, boolean values
+- **Range constraints**: Enforces min/max values
+- **Deprecation warnings**: Alerts about deprecated flags with suggested replacements
+- **Opt-in validation**: Enable with `--validate-env-vars` flag (enabled by default)
+
+### Community Contributions
+Share your tested configurations:
+- **Export working configurations**: After successful deployment
+- **Validation levels**: Experimental → Community-validated → Tested
+- **Test reports**: Document successful deployments on specific instance types
+- **Registry contributions**: Submit configurations via pull requests
+
+### How It Works
+
+```
+User Input → Framework Registry Lookup → Profile Selection (optional)
+                    ↓
+         Model Registry Lookup (optional)
+                    ↓
+         HuggingFace API Fetch (optional)
+                    ↓
+         Configuration Merge (priority order)
+                    ↓
+         Accelerator Validation
+                    ↓
+         Environment Variable Validation
+                    ↓
+         Template Generation
+```
+
+**Configuration Priority Order:**
+1. Base framework configuration (Framework Registry)
+2. Framework profile (if selected)
+3. HuggingFace API data (if available)
+4. Model registry overrides (if available)
+5. Model profile (if selected)
+
+**Graceful Degradation:**
+When registry data is unavailable, the generator falls back to current default behavior - ensuring backward compatibility and reliability.
 
 ## 🚀 Get Started in Minutes
 
@@ -197,6 +299,9 @@ yo ml-container-creator --config=production.json --skip-prompts
 | `--role-arn=<arn>` | AWS IAM role ARN | `arn:aws:iam::123456789012:role/SageMakerRole` |
 | `--project-dir=<dir>` | Output directory path | `./my-project` |
 | `--hf-token=<token>` | HuggingFace authentication token | `hf_abc123...` or `$HF_TOKEN` |
+| `--validate-env-vars` | Enable environment variable validation | `true/false` (default: `true`) |
+| `--validate-with-docker` | Enable Docker introspection validation | `true/false` (default: `false`) |
+| `--offline` | Skip HuggingFace API lookups | `true/false` (default: `false`) |
 
 ### Environment Variables Reference
 
