@@ -10,8 +10,7 @@
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.6, 3.9
  */
 
-import { describe, it } from 'node:test';
-import assert from 'node:assert/strict';
+import assert from 'assert';
 import TemplateEngine from '../../generators/app/lib/template-engine.js';
 import CommentGenerator from '../../generators/app/lib/comment-generator.js';
 
