@@ -26,7 +26,6 @@
     "test:perf": "VALIDATE_ENV_VARS=false mocha test/**/*.test.js --reporter json > test-results.json && node scripts/analyze-test-performance.js",
     "security-audit": "npm audit --audit-level=high",
     "security-fix": "npm audit fix",
-    "pretest": "npm run security-audit",
     "lint": "eslint generators/**/*.js test/**/*.js",
     "lint:fix": "eslint generators/**/*.js test/**/*.js --fix",
     "start": "yo ml-container-creator",
