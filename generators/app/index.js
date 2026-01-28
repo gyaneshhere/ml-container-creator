@@ -270,6 +270,10 @@ export default class extends Generator {
         if (this.configManager.shouldSkipPrompts()) {
             console.log('\n🚀 Skipping prompts - using configuration from other sources');
             this.answers = this.configManager.getFinalConfiguration();
+            
+            // Ensure all template variables are initialized
+            await this._ensureTemplateVariables();
+            
             return;
         }
 
@@ -278,6 +282,9 @@ export default class extends Generator {
         
         // Merge prompt answers with configuration from other sources
         this.answers = this.configManager.getFinalConfiguration(promptAnswers);
+        
+        // Ensure all template variables are initialized
+        await this._ensureTemplateVariables();
     }
 
     /**
@@ -334,14 +341,29 @@ export default class extends Generator {
             throw error; // Re-throw the error so tests can catch it
         }
 
+        // Generate comments for templates using CommentGenerator
+        const CommentGenerator = (await import('./lib/comment-generator.js')).default;
+        const commentGenerator = new CommentGenerator();
+        const comments = commentGenerator.generateDockerfileComments(this.answers);
+        
+        // Prepare ordered environment variables for template
+        const orderedEnvVars = this._getOrderedEnvVars(this.answers.envVars || {});
+
         // Get ignore patterns based on configuration
         const ignorePatterns = templateManager.getIgnorePatterns();
+
+        // Prepare template variables with comments and ordered env vars
+        const templateVars = {
+            ...this.answers,
+            comments,
+            orderedEnvVars
+        };
 
         // Copy all templates, processing EJS variables and excluding ignored patterns
         this.fs.copyTpl(
             this.templatePath('**/*'),
             this.destinationPath(),
-            this.answers,
+            templateVars,
             {},
             { globOptions: { ignore: ignorePatterns } }
         );
@@ -534,7 +556,7 @@ export default class extends Generator {
         if (validationResult.warnings && validationResult.warnings.length > 0) {
             console.log('\n⚠️  Environment Variable Validation Warnings:');
             validationResult.warnings.forEach(warning => {
-                console.log(`   • ${warning.key ? warning.key + ': ' : ''}${warning.message}`);
+                console.log(`   • ${warning.key ? `${warning.key}: ` : ''}${warning.message}`);
             });
         }
         
@@ -545,6 +567,181 @@ export default class extends Generator {
         if (!validationResult.errors || validationResult.errors.length === 0) {
             if (!validationResult.warnings || validationResult.warnings.length === 0) {
                 console.log('   ✅ All environment variables validated successfully');
+            }
+        }
+    }
+
+    /**
+     * Get environment variables in correct order
+     * Preserves dependency order (e.g., CUDA paths before framework variables)
+     * @private
+     * @param {Object} envVars - Environment variables object
+     * @returns {Array<{key: string, value: string}>} Ordered array of env vars
+     */
+    _getOrderedEnvVars(envVars) {
+        const entries = Object.entries(envVars);
+        
+        // Define priority order for environment variable categories
+        const priorities = {
+            // System paths (highest priority)
+            'LD_LIBRARY_PATH': 1,
+            'PATH': 1,
+            'CUDA_HOME': 1,
+            'CUDA_PATH': 1,
+            
+            // CUDA configuration
+            'CUDA_VISIBLE_DEVICES': 2,
+            'NVIDIA_VISIBLE_DEVICES': 2,
+            'NVIDIA_DRIVER_CAPABILITIES': 2,
+            
+            // Framework-specific (medium priority)
+            'VLLM': 3,
+            'TENSORRT': 3,
+            'SGLANG': 3,
+            'TRANSFORMERS': 3,
+            
+            // Application configuration (lower priority)
+            'MAX': 4,
+            'BATCH': 4,
+            'WORKER': 4,
+            'THREAD': 4,
+            
+            // Other variables (lowest priority)
+            'default': 5
+        };
+
+        // Sort entries by priority
+        const sorted = entries.sort(([keyA], [keyB]) => {
+            const priorityA = this._getEnvVarPriority(keyA, priorities);
+            const priorityB = this._getEnvVarPriority(keyB, priorities);
+            
+            if (priorityA !== priorityB) {
+                return priorityA - priorityB;
+            }
+            
+            // If same priority, sort alphabetically
+            return keyA.localeCompare(keyB);
+        });
+
+        // Convert to array of objects for template
+        return sorted.map(([key, value]) => ({ key, value }));
+    }
+
+    /**
+     * Get priority for an environment variable
+     * @private
+     * @param {string} key - Environment variable name
+     * @param {Object} priorities - Priority mapping
+     * @returns {number} Priority value (lower = higher priority)
+     */
+    _getEnvVarPriority(key, priorities) {
+        // Check for exact match first
+        if (priorities[key]) {
+            return priorities[key];
+        }
+
+        // Check for partial matches
+        for (const [pattern, priority] of Object.entries(priorities)) {
+            if (pattern !== 'default' && key.includes(pattern)) {
+                return priority;
+            }
+        }
+
+        // Default priority
+        return priorities.default;
+    }
+
+    /**
+     * Ensure all template variables are initialized with proper defaults
+     * This prevents "undefined" errors in templates
+     * @private
+     */
+    async _ensureTemplateVariables() {
+        // Initialize all template variables with defaults to prevent "undefined" errors
+        const defaults = {
+            chatTemplate: null,
+            chatTemplateSource: null,
+            hfToken: null,
+            envVars: {},
+            inferenceAmiVersion: null,
+            accelerator: null,
+            frameworkVersion: null,
+            validationLevel: 'unknown',
+            configSources: [],
+            recommendedInstanceTypes: []
+        };
+        
+        // Apply defaults for any missing fields
+        Object.entries(defaults).forEach(([key, value]) => {
+            if (this.answers[key] === undefined) {
+                this.answers[key] = value;
+            }
+        });
+        
+        // For transformer models, try to enrich with registry data if available
+        if (this.answers.framework === 'transformers' && this.answers.modelName && this.registryConfigManager) {
+            try {
+                // Fetch HuggingFace data for model-specific info
+                const hfData = await this.registryConfigManager._fetchHuggingFaceData(this.answers.modelName);
+                
+                // Merge chatTemplate if available and not already set
+                if (hfData && hfData.chatTemplate && !this.answers.chatTemplate) {
+                    this.answers.chatTemplate = hfData.chatTemplate;
+                    this.answers.chatTemplateSource = 'HuggingFace_Hub_API';
+                }
+                
+                // Check Model Registry for overrides
+                if (this.registryConfigManager.modelRegistry) {
+                    let modelConfig = this.registryConfigManager.modelRegistry[this.answers.modelName];
+                    
+                    // Try pattern matching if no exact match
+                    if (!modelConfig) {
+                        for (const [pattern, config] of Object.entries(this.registryConfigManager.modelRegistry)) {
+                            if (pattern.includes('*')) {
+                                const regex = new RegExp(`^${pattern.replace(/\*/g, '.*')}$`);
+                                if (regex.test(this.answers.modelName)) {
+                                    modelConfig = config;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Apply model registry overrides
+                    if (modelConfig) {
+                        if (modelConfig.chatTemplate) {
+                            this.answers.chatTemplate = modelConfig.chatTemplate;
+                            this.answers.chatTemplateSource = 'Model_Registry';
+                        }
+                        if (modelConfig.envVars) {
+                            this.answers.envVars = { ...this.answers.envVars, ...modelConfig.envVars };
+                        }
+                    }
+                }
+                
+                // Fetch framework-specific data if frameworkVersion is available
+                if (this.answers.frameworkVersion && this.registryConfigManager.frameworkRegistry) {
+                    const frameworkConfig = this.registryConfigManager.frameworkRegistry[this.answers.framework]?.[this.answers.frameworkVersion];
+                    
+                    if (frameworkConfig) {
+                        // Merge framework environment variables
+                        if (frameworkConfig.envVars) {
+                            this.answers.envVars = { ...frameworkConfig.envVars, ...this.answers.envVars };
+                        }
+                        
+                        // Set inference AMI version
+                        if (frameworkConfig.inferenceAmiVersion) {
+                            this.answers.inferenceAmiVersion = frameworkConfig.inferenceAmiVersion;
+                        }
+                        
+                        // Set accelerator info
+                        if (frameworkConfig.accelerator) {
+                            this.answers.accelerator = frameworkConfig.accelerator;
+                        }
+                    }
+                }
+            } catch (error) {
+                // Silently continue - defaults are already set
             }
         }
     }
