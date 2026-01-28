@@ -13,6 +13,11 @@ Common issues and solutions for ML Container Creator.
 | npm audit failing CI | Only fail on critical: `npm audit --audit-level critical` |
 | Property tests failing | Run from project root directory |
 | Generator not found | `npm link` in project directory |
+| Accelerator type mismatch | Use recommended instance type from error message |
+| Registry file not found | `git checkout generators/app/config/registries/` |
+| HuggingFace API timeout | Use `--offline` flag or wait for fallback |
+| Environment variable validation error | Check type/range or use `--validate-env-vars=false` |
+| Schema validation failed | Ensure all required fields present in registry |
 
 ## Table of Contents
 
@@ -25,6 +30,11 @@ Common issues and solutions for ML Container Creator.
 - [SageMaker Endpoint Issues](#sagemaker-endpoint-issues)
 - [Model Loading Issues](#model-loading-issues)
 - [Performance Issues](#performance-issues)
+- [Configuration Registry Issues](#configuration-registry-issues)
+- [Accelerator Compatibility Issues](#accelerator-compatibility-issues)
+- [HuggingFace API Issues](#huggingface-api-issues)
+- [Environment Variable Validation Issues](#environment-variable-validation-issues)
+- [Registry Schema Issues](#registry-schema-issues)
 
 ---
 
@@ -877,6 +887,672 @@ aws application-autoscaling put-scaling-policy \
 
 # 4. Use multiple instances
 InitialInstanceCount=2  # In endpoint config
+```
+
+---
+
+## Configuration Registry Issues
+
+### Registry File Not Found
+
+**Symptom:**
+```bash
+Warning: Failed to load framework registry, using defaults
+```
+
+**Solution:**
+```bash
+# Verify registry files exist
+ls -la generators/app/config/registries/
+
+# Should see:
+# - frameworks.js
+# - models.js
+# - instance-accelerator-mapping.js
+
+# If missing, restore from git
+git checkout generators/app/config/registries/
+
+# Or reinstall
+npm install
+npm link
+```
+
+### Invalid Registry Schema
+
+**Symptom:**
+```bash
+Error: Framework registry entry missing required field: baseImage
+```
+
+**Solution:**
+```javascript
+// Check registry entry has all required fields
+{
+  "vllm": {
+    "0.5.0": {
+      "baseImage": "vllm/vllm-openai:v0.5.0",  // Required
+      "accelerator": {                          // Required
+        "type": "cuda",
+        "version": "12.1"
+      },
+      "envVars": {},                            // Required (can be empty)
+      "inferenceAmiVersion": "al2-ami-sagemaker-inference-gpu-3-1",  // Required
+      "recommendedInstanceTypes": ["ml.g5.xlarge"],  // Required
+      "validationLevel": "tested"               // Required
+    }
+  }
+}
+
+// Run schema validation tests
+npm test -- --grep "schema validation"
+```
+
+### Configuration Not Applied
+
+**Symptom:**
+Generated Dockerfile doesn't include expected environment variables from registry
+
+**Solution:**
+```bash
+# 1. Verify framework and version match registry
+cat generators/app/config/registries/frameworks.js | grep -A 20 "vllm"
+
+# 2. Check configuration merge priority
+# Priority: Framework base → Framework profile → HF API → Model registry → Model profile
+
+# 3. Enable debug logging
+DEBUG=* yo ml-container-creator
+
+# 4. Check if graceful degradation is occurring
+# If registry is empty, generator uses defaults
+
+# 5. Verify registry is loaded
+# Add console.log in configuration-manager.js
+console.log('Loaded framework registry:', this.frameworkRegistry);
+```
+
+### Profile Not Available
+
+**Symptom:**
+```bash
+Warning: Profile 'low-latency' not found for vllm 0.5.0
+```
+
+**Solution:**
+```javascript
+// Check if profile exists in registry
+{
+  "vllm": {
+    "0.5.0": {
+      // ... base config ...
+      "profiles": {
+        "low-latency": {  // Profile name must match
+          "displayName": "Low Latency",
+          "description": "Optimized for single-request latency",
+          "envVars": {
+            "VLLM_MAX_BATCH_SIZE": "1"
+          }
+        }
+      }
+    }
+  }
+}
+
+// Or skip profile selection
+yo ml-container-creator --skip-profile-selection
+```
+
+---
+
+## Accelerator Compatibility Issues
+
+### Accelerator Type Mismatch
+
+**Symptom:**
+```bash
+Error: Framework requires cuda but instance provides neuron
+Consider using ml.g5.xlarge, ml.g5.2xlarge, ml.g5.4xlarge
+```
+
+**Solution:**
+```bash
+# Option 1: Use recommended instance type
+yo ml-container-creator \
+  --framework=vllm \
+  --instance-type=ml.g5.xlarge
+
+# Option 2: Choose framework compatible with your instance
+# For ml.inf2 (Neuron SDK), use transformers-neuron
+yo ml-container-creator \
+  --framework=transformers-neuron \
+  --instance-type=ml.inf2.xlarge
+
+# Option 3: Override validation (not recommended)
+# Advanced users only - may result in deployment failures
+```
+
+### Accelerator Version Mismatch
+
+**Symptom:**
+```bash
+Warning: Framework requires CUDA 12.1, but instance only supports CUDA 11.8
+Consider using ml.g5 or ml.g6 instances for CUDA 12.x support
+```
+
+**Solution:**
+```bash
+# Option 1: Use instance with correct CUDA version
+# ml.g5 family: CUDA 12.x
+# ml.g4dn family: CUDA 11.x
+# ml.p3 family: CUDA 11.x
+
+yo ml-container-creator \
+  --framework=vllm \
+  --version=0.5.0 \
+  --instance-type=ml.g5.xlarge  # CUDA 12.x
+
+# Option 2: Use older framework version
+yo ml-container-creator \
+  --framework=vllm \
+  --version=0.3.0 \  # Requires CUDA 11.x
+  --instance-type=ml.g4dn.xlarge
+
+# Option 3: Check instance accelerator mapping
+cat generators/app/config/registries/instance-accelerator-mapping.js
+```
+
+### AMI Version Incompatibility
+
+**Symptom:**
+```bash
+Error: InferenceAmiVersion al2-ami-sagemaker-inference-gpu-3-1 incompatible with instance
+```
+
+**Solution:**
+```bash
+# Check AMI version in framework registry
+cat generators/app/config/registries/frameworks.js | grep inferenceAmiVersion
+
+# Verify AMI provides required accelerator version
+# GPU AMIs:
+# - al2-ami-sagemaker-inference-gpu-3-1: CUDA 12.x
+# - al2-ami-sagemaker-inference-gpu-2-0: CUDA 11.x
+
+# Neuron AMIs:
+# - al2-ami-sagemaker-inference-neuron-2-0: Neuron SDK 2.15+
+
+# Update framework registry if needed
+# See docs/REGISTRY_CONTRIBUTION_GUIDE.md
+```
+
+### No Accelerator Data Available
+
+**Symptom:**
+```bash
+Warning: No accelerator data for ml.custom.xlarge (best-effort validation)
+```
+
+**Solution:**
+```bash
+# This is informational - validation is best-effort
+
+# Option 1: Add instance to mapping
+# Edit generators/app/config/registries/instance-accelerator-mapping.js
+{
+  "ml.custom.xlarge": {
+    "family": "custom",
+    "accelerator": {
+      "type": "cuda",
+      "hardware": "NVIDIA A100",
+      "architecture": "Ampere",
+      "versions": ["12.1", "12.2"],
+      "default": "12.2"
+    },
+    "memory": "32 GB",
+    "vcpus": 8,
+    "notes": "Custom instance type"
+  }
+}
+
+# Option 2: Proceed with warning
+# Generator will continue with default behavior
+
+# Option 3: Contribute mapping
+# See docs/REGISTRY_CONTRIBUTION_GUIDE.md
+```
+
+### Custom Accelerator Type
+
+**Symptom:**
+```bash
+Warning: No validator for accelerator type 'tpu' (best-effort validation)
+```
+
+**Solution:**
+```bash
+# Option 1: Create custom validator
+# See docs/ACCELERATOR_VALIDATOR_GUIDE.md
+
+# Option 2: Use existing accelerator type
+# Supported types: cuda, neuron, cpu, rocm
+
+# Option 3: Contribute validator
+# 1. Create validator class extending AcceleratorValidator
+# 2. Implement validate() and getVersionMismatchMessage()
+# 3. Register in ValidationEngine
+# 4. Add tests
+# 5. Submit PR
+```
+
+---
+
+## HuggingFace API Issues
+
+### API Timeout
+
+**Symptom:**
+```bash
+Warning: HuggingFace API timeout, checking local registry
+```
+
+**Solution:**
+```bash
+# This is expected behavior - generator falls back gracefully
+
+# Option 1: Increase timeout (if slow network)
+# Edit generators/app/lib/huggingface-client.js
+this.timeout = 10000;  // 10 seconds instead of 5
+
+# Option 2: Use offline mode
+yo ml-container-creator --offline
+
+# Option 3: Check network connectivity
+curl -I https://huggingface.co
+
+# Option 4: Use model registry instead
+# Add model to generators/app/config/registries/models.js
+```
+
+### Model Not Found
+
+**Symptom:**
+```bash
+Warning: Model 'my-org/my-model' not found on HuggingFace, proceeding with defaults
+```
+
+**Solution:**
+```bash
+# This is expected for private or non-existent models
+
+# Option 1: Verify model ID
+# Check on https://huggingface.co/my-org/my-model
+
+# Option 2: Add to model registry
+# Edit generators/app/config/registries/models.js
+{
+  "my-org/my-model": {
+    "family": "llama",
+    "chatTemplate": "...",
+    "requiresTemplate": true,
+    "validationLevel": "experimental"
+  }
+}
+
+# Option 3: Use offline mode
+yo ml-container-creator --offline
+
+# Option 4: Proceed without model-specific config
+# Generator will use framework defaults
+```
+
+### Rate Limit Exceeded
+
+**Symptom:**
+```bash
+Warning: HuggingFace API rate limit exceeded, using cached data
+```
+
+**Solution:**
+```bash
+# Option 1: Wait and retry
+# HuggingFace has rate limits for unauthenticated requests
+
+# Option 2: Use HF_TOKEN for higher limits
+export HF_TOKEN=hf_your_token_here
+yo ml-container-creator
+
+# Option 3: Use offline mode
+yo ml-container-creator --offline
+
+# Option 4: Use model registry
+# Pre-configure models in local registry
+```
+
+### Chat Template Not Found
+
+**Symptom:**
+```bash
+Info: No chat template found for model, chat endpoints may not work
+```
+
+**Solution:**
+```bash
+# This is informational - not all models have chat templates
+
+# Option 1: Add chat template to model registry
+{
+  "my-org/my-model": {
+    "chatTemplate": "{% for message in messages %}...",
+    "requiresTemplate": true
+  }
+}
+
+# Option 2: Configure at runtime
+# Set CHAT_TEMPLATE environment variable in deployment
+
+# Option 3: Use model without chat
+# Model will work for completion but not chat endpoints
+
+# Option 4: Check HuggingFace model card
+# Some models document chat template in README
+```
+
+---
+
+## Environment Variable Validation Issues
+
+### Unknown Environment Variable
+
+**Symptom:**
+```bash
+Warning: Environment variable 'CUSTOM_FLAG' not found in known flags registry
+```
+
+**Solution:**
+```bash
+# This is a warning - generator will proceed
+
+# Option 1: Add to known flags registry
+# Edit generators/app/config/registries/framework-flags.js
+{
+  "vllm": {
+    "0.5.0": {
+      "CUSTOM_FLAG": {
+        "type": "string",
+        "description": "Custom configuration flag"
+      }
+    }
+  }
+}
+
+# Option 2: Disable validation
+yo ml-container-creator --validate-env-vars=false
+
+# Option 3: Contribute flag definition
+# See docs/REGISTRY_CONTRIBUTION_GUIDE.md
+
+# Option 4: Proceed with warning
+# Flag will still be included in generated files
+```
+
+### Invalid Environment Variable Type
+
+**Symptom:**
+```bash
+Error: Environment variable 'MAX_BATCH_SIZE' must be integer, got 'large'
+```
+
+**Solution:**
+```bash
+# Fix the value to match expected type
+
+# Integer values
+MAX_BATCH_SIZE=256
+
+# Float values
+GPU_MEMORY_UTILIZATION=0.9
+
+# Boolean values
+ENABLE_CACHING=true
+
+# String values
+MODEL_NAME="my-model"
+
+# Check flag definition in registry
+cat generators/app/config/registries/framework-flags.js
+```
+
+### Environment Variable Out of Range
+
+**Symptom:**
+```bash
+Warning: Environment variable 'GPU_MEMORY_UTILIZATION' value 1.5 exceeds maximum 1.0
+```
+
+**Solution:**
+```bash
+# Adjust value to be within valid range
+
+# Check constraints in registry
+{
+  "GPU_MEMORY_UTILIZATION": {
+    "type": "float",
+    "min": 0.0,
+    "max": 1.0,
+    "description": "Fraction of GPU memory to use"
+  }
+}
+
+# Use valid value
+GPU_MEMORY_UTILIZATION=0.9
+
+# Or disable validation
+yo ml-container-creator --validate-env-vars=false
+```
+
+### Deprecated Environment Variable
+
+**Symptom:**
+```bash
+Warning: Environment variable 'OLD_FLAG' is deprecated, use 'NEW_FLAG' instead
+```
+
+**Solution:**
+```bash
+# Update to use new flag name
+
+# Old (deprecated)
+OLD_FLAG=value
+
+# New (recommended)
+NEW_FLAG=value
+
+# Check deprecation info in registry
+{
+  "OLD_FLAG": {
+    "deprecated": true,
+    "replacement": "NEW_FLAG",
+    "deprecatedSince": "0.5.0"
+  }
+}
+```
+
+### Validation Disabled in Tests
+
+**Symptom:**
+```bash
+# Tests pass locally but fail in CI
+Error: Environment variable validation failed
+```
+
+**Solution:**
+```bash
+# Ensure VALIDATE_ENV_VARS=false in test environment
+
+# In test files
+process.env.VALIDATE_ENV_VARS = 'false';
+
+# In CI configuration
+env:
+  VALIDATE_ENV_VARS: false
+
+# In npm scripts
+"test": "VALIDATE_ENV_VARS=false mocha"
+
+# Verify in tests
+console.log('VALIDATE_ENV_VARS:', process.env.VALIDATE_ENV_VARS);
+```
+
+---
+
+## Registry Schema Issues
+
+### Schema Validation Failed
+
+**Symptom:**
+```bash
+Error: Framework registry validation failed: data.vllm.0.5.0 should have required property 'baseImage'
+```
+
+**Solution:**
+```javascript
+// Ensure all required fields are present
+
+// Framework Registry required fields:
+{
+  "baseImage": "string",
+  "accelerator": {
+    "type": "cuda|neuron|cpu|rocm",
+    "version": "string|null"
+  },
+  "envVars": {},
+  "inferenceAmiVersion": "string",
+  "recommendedInstanceTypes": ["string"],
+  "validationLevel": "tested|community-validated|experimental|unknown"
+}
+
+// Model Registry required fields:
+{
+  "family": "string",
+  "chatTemplate": "string|null",
+  "requiresTemplate": boolean,
+  "validationLevel": "tested|community-validated|experimental",
+  "frameworkCompatibility": {}
+}
+
+// Instance Accelerator Mapping required fields:
+{
+  "family": "string",
+  "accelerator": {
+    "type": "cuda|neuron|cpu|rocm",
+    "hardware": "string",
+    "architecture": "string",
+    "versions": ["string"]|null,
+    "default": "string|null"
+  },
+  "memory": "string",
+  "vcpus": number
+}
+
+// Run schema validation
+npm test -- --grep "schema"
+```
+
+### Invalid Accelerator Type
+
+**Symptom:**
+```bash
+Error: data.accelerator.type should be equal to one of the allowed values: cuda, neuron, cpu, rocm
+```
+
+**Solution:**
+```javascript
+// Use valid accelerator type
+{
+  "accelerator": {
+    "type": "cuda",  // Must be: cuda, neuron, cpu, or rocm
+    "version": "12.1"
+  }
+}
+
+// For new accelerator types:
+// 1. Create custom validator (see docs/ACCELERATOR_VALIDATOR_GUIDE.md)
+// 2. Update schema to include new type
+// 3. Add to ValidationEngine
+```
+
+### Invalid Validation Level
+
+**Symptom:**
+```bash
+Error: data.validationLevel should be equal to one of the allowed values
+```
+
+**Solution:**
+```javascript
+// Use valid validation level
+
+// Framework Registry:
+"validationLevel": "tested"  // or "community-validated", "experimental", "unknown"
+
+// Model Registry:
+"validationLevel": "tested"  // or "community-validated", "experimental"
+
+// Validation level criteria:
+// - tested: Deployed and validated on AWS
+// - community-validated: Built and tested by community
+// - experimental: Passes automated tests only
+// - unknown: No validation data
+```
+
+### Missing Required Field
+
+**Symptom:**
+```bash
+Error: data should have required property 'recommendedInstanceTypes'
+```
+
+**Solution:**
+```javascript
+// Add missing required field
+{
+  "vllm": {
+    "0.5.0": {
+      "baseImage": "vllm/vllm-openai:v0.5.0",
+      "accelerator": { "type": "cuda", "version": "12.1" },
+      "envVars": {},
+      "inferenceAmiVersion": "al2-ami-sagemaker-inference-gpu-3-1",
+      "recommendedInstanceTypes": ["ml.g5.xlarge"],  // Add this
+      "validationLevel": "tested"
+    }
+  }
+}
+
+// Check schema definition
+cat generators/app/config/schemas/framework-registry-schema.js
+```
+
+### Pattern Matching Not Working
+
+**Symptom:**
+Model pattern `mistral*` doesn't match `mistralai/Mistral-7B-v0.1`
+
+**Solution:**
+```javascript
+// Use correct pattern syntax
+
+// Correct patterns:
+"mistralai/Mistral-*"     // Matches mistralai/Mistral-7B-v0.1
+"meta-llama/Llama-2-*"    // Matches meta-llama/Llama-2-7b-hf
+"google/gemma-*"          // Matches google/gemma-2b
+
+// Incorrect patterns:
+"mistral*"                // Won't match mistralai/Mistral-7B-v0.1
+"*Mistral*"               // Too broad, may match unintended models
+
+// Pattern matching is case-sensitive
+// Exact matches take precedence over patterns
 ```
 
 ---

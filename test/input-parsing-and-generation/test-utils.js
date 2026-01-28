@@ -67,81 +67,36 @@ export function createTempConfig(dir, filename, config) {
  * Validate that expected files exist
  */
 export function validateFiles(expectedFiles, context = '') {
-    console.log(`    🔍 Checking ${expectedFiles.length} expected files${context ? ` for ${context}` : ''}...`);
-    const results = [];
-    
     expectedFiles.forEach(file => {
         try {
             assert.file([file]);
-            console.log(`    ✅ Found: ${file}`);
-            results.push({ file, status: 'found' });
         } catch (error) {
-            console.log(`    ❌ Missing: ${file}`);
-            results.push({ file, status: 'missing', error });
+            throw new Error(`Expected file not found${context ? ` in ${context}` : ''}: ${file}`);
         }
     });
-    
-    const missing = results.filter(r => r.status === 'missing');
-    if (missing.length > 0) {
-        console.log(`    📊 Summary: ${results.length - missing.length}/${results.length} files found`);
-        throw new Error(`Expected files not found${context ? ` in ${context}` : ''}: ${missing.map(m => m.file).join(', ')}`);
-    }
-    
-    console.log(`    📊 Summary: All ${results.length} expected files found`);
 }
 
 /**
  * Validate file content matches pattern
  */
 export function validateFileContent(file, pattern, context = '') {
-    console.log(`    🔍 Checking content in ${file}${context ? ` for ${context}` : ''}...`);
-    
     try {
         if (!fs.existsSync(file)) {
             throw new Error(`File ${file} does not exist`);
         }
         
         const content = fs.readFileSync(file, 'utf8');
-        const patternStr = pattern instanceof RegExp ? pattern.source : pattern;
         
         if (pattern instanceof RegExp) {
             if (!pattern.test(content)) {
-                throw new Error(`Pattern /${patternStr}/ not found in content`);
+                throw new Error(`Pattern /${pattern.source}/ not found in ${file}`);
             }
         } else {
             if (!content.includes(pattern)) {
-                throw new Error(`String "${pattern}" not found in content`);
+                throw new Error(`String "${pattern}" not found in ${file}`);
             }
         }
-        
-        console.log(`    ✅ Content match in ${file}: ${patternStr}`);
     } catch (error) {
-        console.log(`    ❌ Content validation failed in ${file}: ${error.message}`);
-        
-        if (fs.existsSync(file)) {
-            const content = fs.readFileSync(file, 'utf8');
-            console.log(`    📄 File size: ${content.length} characters`);
-            console.log(`    📄 Content preview: ${content.substring(0, 300)}...`);
-            
-            // Show lines that might contain the pattern
-            const lines = content.split('\n');
-            const patternStr = pattern instanceof RegExp ? pattern.source : pattern;
-            console.log(`    🔍 Looking for pattern: ${patternStr}`);
-            
-            const matchingLines = lines.filter(line => {
-                if (pattern instanceof RegExp) {
-                    return pattern.test(line);
-                }
-                return line.includes(pattern);
-            });
-            
-            if (matchingLines.length > 0) {
-                console.log(`    📄 Found ${matchingLines.length} matching lines:`, matchingLines.slice(0, 3));
-            } else {
-                console.log('    📄 No matching lines found. First 5 lines:', lines.slice(0, 5));
-            }
-        }
-        
         throw new Error(`Content validation failed for ${file}${context ? ` in ${context}` : ''}: ${error.message}`);
     }
 }
@@ -150,25 +105,19 @@ export function validateFileContent(file, pattern, context = '') {
  * Validate that files do NOT exist
  */
 export function validateNoFiles(unexpectedFiles, context = '') {
-    console.log(`    🔍 Checking ${unexpectedFiles.length} files should NOT exist${context ? ` for ${context}` : ''}...`);
     const found = [];
     
     unexpectedFiles.forEach(file => {
         try {
             assert.noFile([file]);
-            console.log(`    ✅ Correctly absent: ${file}`);
         } catch (error) {
-            console.log(`    ❌ Unexpectedly found: ${file}`);
             found.push(file);
         }
     });
     
     if (found.length > 0) {
-        console.log(`    📊 Summary: ${found.length} unexpected files found`);
         throw new Error(`Files should not exist${context ? ` in ${context}` : ''}: ${found.join(', ')}`);
     }
-    
-    console.log(`    📊 Summary: All ${unexpectedFiles.length} files correctly absent`);
 }
 
 /**
@@ -237,24 +186,12 @@ export function setupTestHooks(suiteName) {
 
     beforeEach(function() {
         testCounter++;
-        
-        console.log(`\n🧪 Test #${testCounter}: ${this.currentTest.title}`);
-        console.log(`📍 Test Suite: ${suiteName}`);
-        
         cleanupEnvironmentVariables();
     });
 
     afterEach(function() {
         if (this.currentTest.state === 'failed') {
-            console.log(`❌ Test #${testCounter} FAILED: ${this.currentTest.title}`);
-            console.log(`📍 Suite: ${suiteName}`);
             debugCurrentState(`test #${testCounter} failure`);
-        } else {
-            console.log(`✅ Test #${testCounter} PASSED: ${this.currentTest.title}`);
         }
-    });
-
-    after(() => {
-        console.log(`\n📊 ${suiteName} suite completed: ${testCounter} tests run`);
     });
 }

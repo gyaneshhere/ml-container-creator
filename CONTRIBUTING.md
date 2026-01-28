@@ -26,36 +26,58 @@ Contributions via pull requests are much appreciated. Before sending us a pull r
 1. You are working against the latest source on the *main* branch.
 2. You check existing open, and recently merged, pull requests to make sure someone else hasn't addressed the problem already.
 3. You open an issue to discuss any significant work - we would hate for your time to be wasted.
-4. **All tests pass** - Run `npm run validate` to ensure your changes don't break existing functionality.
-5. **New functionality includes tests** - Add appropriate unit tests and property tests for new features.
+4. **You have Node.js v24+** - Required for running tests. Use `nvm use node` to switch to the latest version.
+5. **All tests pass** - Run `npm run validate` to ensure your changes don't break existing functionality.
+6. **New functionality includes tests** - Add appropriate unit tests and property tests for new features.
 
 To send us a pull request, please:
 
 1. Fork the repository.
 2. Modify the source; please focus on the specific change you are contributing. If you also reformat all the code, it will be hard for us to focus on your change.
-3. **Ensure all tests pass** by running `npm run validate`.
-4. **Add tests for new functionality** following our testing patterns.
-5. Commit to your fork using clear commit messages.
-6. Send us a pull request, answering any default questions in the pull request interface.
-7. Pay attention to any automated CI failures reported in the pull request, and stay involved in the conversation.
+3. **Ensure you're using Node.js v24+** by running `nvm use node`.
+4. **Ensure all tests pass** by running `npm run validate`.
+5. **Add tests for new functionality** following our testing patterns.
+6. Commit to your fork using clear commit messages.
+7. Send us a pull request, answering any default questions in the pull request interface.
+8. Pay attention to any automated CI failures reported in the pull request, and stay involved in the conversation.
 
 GitHub provides additional document on [forking a repository](https://help.github.com/articles/fork-a-repo/) and
 [creating a pull request](https://help.github.com/articles/creating-a-pull-request/).
 
 ## Testing Requirements
 
+### Prerequisites
+
+**Node.js v24+ is required** for running the test suite. The tests use modern JavaScript features that are not available in older Node versions.
+
+```bash
+# Check your Node version
+node --version
+
+# If using nvm, switch to the latest version
+nvm use node
+
+# Verify you're on v24+
+node --version  # Should show v24.x.x or higher
+```
+
+**Important**: Running tests with Node.js < v24 will cause errors like `Unexpected token 'with'`. Always run `nvm use node` before testing.
+
 ### Before Submitting a PR
 
 All pull requests must pass our comprehensive test suite:
 
 ```bash
+# ALWAYS run this first to ensure correct Node version
+nvm use node
+
 # Run the full validation suite (required before PR submission)
 npm run validate
 
 # This runs:
 # 1. ESLint code quality checks
 # 2. Security audit (npm audit)
-# 3. Unit tests (87 tests)
+# 3. Unit tests (238 tests)
 # 4. Property-based tests (10 universal correctness properties)
 ```
 

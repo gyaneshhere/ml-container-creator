@@ -63,7 +63,6 @@ describe('Template Exclusion Logic', () => {
                 console.log(`    ✅ Includes: ${pattern}`);
             });
             
-            console.log('    ✅ CodeBuild exclusion patterns correct');
         });
     });
 
@@ -110,7 +109,6 @@ describe('Template Exclusion Logic', () => {
                 console.log(`    ✅ Includes: ${pattern}`);
             });
             
-            console.log('    ✅ SageMaker exclusion patterns correct');
         });
     });
 
@@ -156,13 +154,11 @@ describe('Template Exclusion Logic', () => {
                 throw new Error('Invalid deployment target should have been rejected');
             } catch (error) {
                 if (error.message.includes('invalid-target not implemented yet')) {
-                    console.log('    ✅ Invalid target correctly rejected: invalid-target');
                 } else {
                     throw error;
                 }
             }
             
-            console.log('    ✅ Deployment target validation working correctly');
         });
     });
 
@@ -282,7 +278,6 @@ describe('Template Exclusion Logic', () => {
                 console.log(`    ✅ Contains ECR operation: ${operation}`);
             });
             
-            console.log('    ✅ buildspec.yml template content correct');
         });
 
         it('should generate submit_build.sh with required functionality', () => {
@@ -347,7 +342,6 @@ describe('Template Exclusion Logic', () => {
                 console.log(`    ✅ Supports env var: ${envVar}`);
             });
             
-            console.log('    ✅ submit_build.sh template content correct');
         });
 
         it('should generate IAM_PERMISSIONS.md with required documentation', () => {
@@ -408,7 +402,6 @@ describe('Template Exclusion Logic', () => {
                 console.log(`    ✅ Contains variable: ${variable}`);
             });
             
-            console.log('    ✅ IAM_PERMISSIONS.md template content correct');
         });
 
         it('should modify deploy.sh with correct conditional logic', () => {
@@ -463,7 +456,6 @@ describe('Template Exclusion Logic', () => {
                 console.log(`    ✅ Contains SageMaker logic: ${logic}`);
             });
             
-            console.log('    ✅ deploy.sh conditional logic correct');
         });
     });
 });
