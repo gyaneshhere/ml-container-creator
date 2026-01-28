@@ -246,6 +246,7 @@ Error: EACCES: permission denied, mkdir '/github/home/.npm'
 ```
 
 **Solution:**
+{% raw %}
 ```bash
 # Remove npm cache configuration if package-lock.json is gitignored
 # Don't use: npm ci --cache .npm
@@ -260,6 +261,7 @@ npm install
     path: ~/.npm
     key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
 ```
+{% endraw %}
 
 ### CI Failing on Moderate Vulnerabilities
 
@@ -1237,6 +1239,7 @@ Info: No chat template found for model, chat endpoints may not work
 ```
 
 **Solution:**
+{% raw %}
 ```bash
 # This is informational - not all models have chat templates
 
@@ -1257,6 +1260,7 @@ Info: No chat template found for model, chat endpoints may not work
 # Option 4: Check HuggingFace model card
 # Some models document chat template in README
 ```
+{% endraw %}
 
 ---
 
