@@ -22,7 +22,7 @@ Common issues and solutions for ML Container Creator.
 ## Table of Contents
 
 - [Generator Issues](#generator-issues)
-- [Development & Testing Issues](#development--testing-issues)
+- [Development and Testing Issues](#development-and-testing-issues)
 - [CI/CD Issues](#cicd-issues)
 - [Docker Build Issues](#docker-build-issues)
 - [Local Testing Issues](#local-testing-issues)
@@ -123,7 +123,7 @@ yo --generators
 
 ---
 
-## Development & Testing Issues
+## Development and Testing Issues
 
 ### ESLint Errors After Changes
 
