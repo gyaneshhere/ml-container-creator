@@ -220,6 +220,7 @@ The Model Registry stores model-specific overrides and optimizations.
 
 ### Example: Adding Llama 3 Models
 
+{% raw %}
 ```javascript
 {
   "meta-llama/Meta-Llama-3-*": {
@@ -255,6 +256,7 @@ The Model Registry stores model-specific overrides and optimizations.
   }
 }
 ```
+{% endraw %}
 
 ### Pattern Matching
 
@@ -530,6 +532,7 @@ When submitting test results, include:
 
 ### Example 2: Adding Model-Specific Overrides
 
+{% raw %}
 ```javascript
 // generators/app/config/registries/models.js
 {
@@ -557,6 +560,7 @@ When submitting test results, include:
   }
 }
 ```
+{% endraw %}
 
 ### Example 3: Adding New Instance Types
 
