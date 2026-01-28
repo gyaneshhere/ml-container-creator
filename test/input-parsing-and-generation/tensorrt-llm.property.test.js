@@ -35,7 +35,7 @@ describe('TensorRT-LLM Properties', () => {
     });
 
     // Cleanup after each test to prevent resource leaks
-    afterEach(async function() {
+    afterEach(async () => {
         // Clean up any active test runners
         if (activeRunners.length > 0) {
             for (const runner of activeRunners) {

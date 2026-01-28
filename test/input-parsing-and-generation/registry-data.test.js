@@ -311,7 +311,7 @@ describe('Registry Data - Unit Tests', () => {
                 }
             }
             
-            console.log(`    ✅ All instance families have consistent accelerator types`);
+            console.log('    ✅ All instance families have consistent accelerator types');
         });
     });
 

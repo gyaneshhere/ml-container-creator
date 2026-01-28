@@ -34,7 +34,7 @@ describe('Accelerator Validators', () => {
     setupTestHooks('Accelerator Validators');
 
     describe('CUDA Validator', () => {
-        it('should validate compatible CUDA versions (same major, equal minor)', function() {
+        it('should validate compatible CUDA versions (same major, equal minor)', () => {
             const frameworkConfig = {
                 accelerator: {
                     type: 'cuda',
@@ -56,7 +56,7 @@ describe('Accelerator Validators', () => {
             assert(result.info.includes('12.1'), 'Info should mention version');
         });
 
-        it('should validate compatible CUDA versions (same major, higher minor)', function() {
+        it('should validate compatible CUDA versions (same major, higher minor)', () => {
             const frameworkConfig = {
                 accelerator: {
                     type: 'cuda',
@@ -77,7 +77,7 @@ describe('Accelerator Validators', () => {
             assert(result.info, 'Should have info message');
         });
 
-        it('should reject incompatible CUDA versions (different major)', function() {
+        it('should reject incompatible CUDA versions (different major)', () => {
             const frameworkConfig = {
                 accelerator: {
                     type: 'cuda',
@@ -100,7 +100,7 @@ describe('Accelerator Validators', () => {
             assert(result.error.includes('11.8'), 'Error should mention provided version');
         });
 
-        it('should reject incompatible CUDA versions (same major, lower minor)', function() {
+        it('should reject incompatible CUDA versions (same major, lower minor)', () => {
             const frameworkConfig = {
                 accelerator: {
                     type: 'cuda',
@@ -121,18 +121,18 @@ describe('Accelerator Validators', () => {
             assert(result.error, 'Should have error message');
         });
 
-        it('should generate user-friendly error messages', function() {
+        it('should generate user-friendly error messages', () => {
             const message = validators.cuda.getVersionMismatchMessage('12.1', ['11.8', '11.9']);
             
             assert(message.includes('12.1'), 'Message should include required version');
             assert(message.includes('11.8'), 'Message should include provided versions');
             assert(message.includes('ml.g5') || message.includes('ml.g6'), 
-                   'Message should suggest compatible instance types');
+                'Message should suggest compatible instance types');
         });
     });
 
     describe('Neuron SDK Validator', () => {
-        it('should validate compatible Neuron SDK versions (same major, equal minor)', function() {
+        it('should validate compatible Neuron SDK versions (same major, equal minor)', () => {
             const frameworkConfig = {
                 accelerator: {
                     type: 'neuron',
@@ -154,7 +154,7 @@ describe('Accelerator Validators', () => {
             assert(result.info.includes('2.15.0'), 'Info should mention version');
         });
 
-        it('should validate compatible Neuron SDK versions (same major, higher minor)', function() {
+        it('should validate compatible Neuron SDK versions (same major, higher minor)', () => {
             const frameworkConfig = {
                 accelerator: {
                     type: 'neuron',
@@ -175,7 +175,7 @@ describe('Accelerator Validators', () => {
             assert(result.info, 'Should have info message');
         });
 
-        it('should reject incompatible Neuron SDK versions (different major)', function() {
+        it('should reject incompatible Neuron SDK versions (different major)', () => {
             const frameworkConfig = {
                 accelerator: {
                     type: 'neuron',
@@ -197,7 +197,7 @@ describe('Accelerator Validators', () => {
             assert(result.error.includes('2.15.0'), 'Error should mention required version');
         });
 
-        it('should reject incompatible Neuron SDK versions (same major, lower minor)', function() {
+        it('should reject incompatible Neuron SDK versions (same major, lower minor)', () => {
             const frameworkConfig = {
                 accelerator: {
                     type: 'neuron',
@@ -218,7 +218,7 @@ describe('Accelerator Validators', () => {
             assert(result.error, 'Should have error message');
         });
 
-        it('should generate user-friendly error messages', function() {
+        it('should generate user-friendly error messages', () => {
             const message = validators.neuron.getVersionMismatchMessage('2.16.0', ['2.15.0', '2.14.0']);
             
             assert(message.includes('2.16.0'), 'Message should include required version');
@@ -228,7 +228,7 @@ describe('Accelerator Validators', () => {
     });
 
     describe('CPU Validator', () => {
-        it('should always validate CPU as compatible', function() {
+        it('should always validate CPU as compatible', () => {
             const frameworkConfig = {
                 accelerator: {
                     type: 'cpu',
@@ -250,7 +250,7 @@ describe('Accelerator Validators', () => {
             assert(result.info.includes('CPU'), 'Info should mention CPU');
         });
 
-        it('should return empty string for version mismatch message', function() {
+        it('should return empty string for version mismatch message', () => {
             const message = validators.cpu.getVersionMismatchMessage('any', ['any']);
             
             assert.strictEqual(message, '', 'CPU should return empty string for version mismatch');
@@ -258,7 +258,7 @@ describe('Accelerator Validators', () => {
     });
 
     describe('ROCm Validator', () => {
-        it('should validate compatible ROCm versions (same major, equal minor)', function() {
+        it('should validate compatible ROCm versions (same major, equal minor)', () => {
             const frameworkConfig = {
                 accelerator: {
                     type: 'rocm',
@@ -280,7 +280,7 @@ describe('Accelerator Validators', () => {
             assert(result.info.includes('5.4.0'), 'Info should mention version');
         });
 
-        it('should validate compatible ROCm versions (same major, higher minor)', function() {
+        it('should validate compatible ROCm versions (same major, higher minor)', () => {
             const frameworkConfig = {
                 accelerator: {
                     type: 'rocm',
@@ -301,7 +301,7 @@ describe('Accelerator Validators', () => {
             assert(result.info, 'Should have info message');
         });
 
-        it('should reject incompatible ROCm versions (different major)', function() {
+        it('should reject incompatible ROCm versions (different major)', () => {
             const frameworkConfig = {
                 accelerator: {
                     type: 'rocm',
@@ -323,7 +323,7 @@ describe('Accelerator Validators', () => {
             assert(result.error.includes('5.4.0'), 'Error should mention required version');
         });
 
-        it('should reject incompatible ROCm versions (same major, lower minor)', function() {
+        it('should reject incompatible ROCm versions (same major, lower minor)', () => {
             const frameworkConfig = {
                 accelerator: {
                     type: 'rocm',
@@ -344,13 +344,13 @@ describe('Accelerator Validators', () => {
             assert(result.error, 'Should have error message');
         });
 
-        it('should generate user-friendly error messages', function() {
+        it('should generate user-friendly error messages', () => {
             const message = validators.rocm.getVersionMismatchMessage('5.5.0', ['5.4.0', '5.3.0']);
             
             assert(message.includes('5.5.0'), 'Message should include required version');
             assert(message.includes('5.4.0'), 'Message should include provided versions');
             assert(message.includes('AMD GPU') || message.includes('ROCm'), 
-                   'Message should mention AMD GPU or ROCm');
+                'Message should mention AMD GPU or ROCm');
         });
     });
 });

@@ -248,7 +248,6 @@ describe('Documentation Generation Tests', () => {
             console.log('\n  🧪 Testing per-framework page generation...');
             
             const vllmPath = path.join(testDir, 'docs/validation/vllm.md');
-            const tensorrtPath = path.join(testDir, 'docs/validation/tensorrt-llm.md');
             
             if (fs.existsSync(vllmPath)) {
                 const vllmContent = fs.readFileSync(vllmPath, 'utf-8');

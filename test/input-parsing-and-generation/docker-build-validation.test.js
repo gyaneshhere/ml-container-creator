@@ -55,32 +55,26 @@ describe('Docker Build Validation (Optional)', () => {
     function buildDockerImage(projectDir, imageName) {
         const startTime = Date.now();
         let buildSuccess = false;
-        let buildOutput = '';
         let imageSize = null;
         
-        try {
-            // Build Docker image
-            buildOutput = execSync(
-                `docker build -t ${imageName} .`,
-                {
-                    cwd: projectDir,
-                    encoding: 'utf-8',
-                    stdio: 'pipe'
-                }
-            );
-            
-            buildSuccess = true;
-            
-            // Get image size
-            const inspectOutput = execSync(
-                `docker inspect ${imageName} --format='{{.Size}}'`,
-                { encoding: 'utf-8' }
-            );
-            imageSize = parseInt(inspectOutput.trim());
-            
-        } catch (error) {
-            buildOutput = error.stdout || error.message;
-        }
+        // Build Docker image
+        execSync(
+            `docker build -t ${imageName} .`,
+            {
+                cwd: projectDir,
+                encoding: 'utf-8',
+                stdio: 'pipe'
+            }
+        );
+        
+        buildSuccess = true;
+        
+        // Get image size
+        const inspectOutput = execSync(
+            `docker inspect ${imageName} --format='{{.Size}}'`,
+            { encoding: 'utf-8' }
+        );
+        imageSize = parseInt(inspectOutput.trim());
         
         const buildTime = Date.now() - startTime;
         
@@ -102,7 +96,7 @@ describe('Docker Build Validation (Optional)', () => {
         const logFile = path.join(logDir, 'docker-build.json');
         fs.writeFileSync(logFile, JSON.stringify(result, null, 2));
         
-        console.log(`\n   📊 Build Results:`);
+        console.log('\n   📊 Build Results:');
         console.log(`      Status: ${buildSuccess ? '✅ Success' : '❌ Failed'}`);
         console.log(`      Build Time: ${(buildTime / 1000).toFixed(2)}s`);
         if (imageSize) {

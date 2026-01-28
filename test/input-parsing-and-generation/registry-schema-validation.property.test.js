@@ -12,7 +12,6 @@
 
 import fc from 'fast-check';
 import { describe, it, before } from 'mocha';
-import assert from 'assert';
 import SchemaValidator from '../../generators/app/lib/schema-validator.js';
 import frameworkSchema from '../../generators/app/config/schemas/framework-registry-schema.js';
 import modelSchema from '../../generators/app/config/schemas/model-registry-schema.js';
@@ -157,13 +156,13 @@ describe('Registry Schema Validation - Property-Based Tests', () => {
                     
                     // Incomplete entries should fail validation
                     if (result.valid) {
-                        console.log(`    ❌ Incomplete entry passed validation (should fail)`);
+                        console.log('    ❌ Incomplete entry passed validation (should fail)');
                         return false;
                     }
                     
                     // Should have error messages about missing fields
                     if (result.errors.length === 0) {
-                        console.log(`    ❌ No error messages for incomplete entry`);
+                        console.log('    ❌ No error messages for incomplete entry');
                         return false;
                     }
                     

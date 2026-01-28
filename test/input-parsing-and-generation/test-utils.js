@@ -181,10 +181,10 @@ export function cleanupEnvironmentVariables() {
 /**
  * Setup test hooks for consistent numbering and cleanup
  */
-export function setupTestHooks(suiteName) {
+export function setupTestHooks() {
     let testCounter = 0;
 
-    beforeEach(function() {
+    beforeEach(() => {
         testCounter++;
         cleanupEnvironmentVariables();
     });

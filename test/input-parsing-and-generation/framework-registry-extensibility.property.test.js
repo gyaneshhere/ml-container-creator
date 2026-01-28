@@ -13,14 +13,9 @@
 import fc from 'fast-check';
 import { describe, it, before } from 'mocha';
 import assert from 'assert';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import helpers from 'yeoman-test';
 import SchemaValidator from '../../generators/app/lib/schema-validator.js';
 import frameworkSchema from '../../generators/app/config/schemas/framework-registry-schema.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 describe('Framework Registry Extensibility - Property-Based Tests', () => {
     let validator;
@@ -102,7 +97,7 @@ describe('Framework Registry Extensibility - Property-Based Tests', () => {
                                     type: frameworkData.acceleratorType,
                                     version: frameworkData.acceleratorVersion
                                 },
-                                envVars: envVars,
+                                envVars,
                                 inferenceAmiVersion: frameworkData.inferenceAmiVersion,
                                 recommendedInstanceTypes: instanceTypes,
                                 validationLevel: frameworkData.validationLevel
@@ -201,7 +196,7 @@ describe('Framework Registry Extensibility - Property-Based Tests', () => {
                                 inferenceAmiVersion: 'al2-ami-sagemaker-inference-gpu-3-1',
                                 recommendedInstanceTypes: ['ml.g5.xlarge'],
                                 validationLevel: 'experimental',
-                                profiles: profiles
+                                profiles
                             }
                         }
                     };

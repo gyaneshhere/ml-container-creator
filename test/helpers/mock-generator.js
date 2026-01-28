@@ -9,10 +9,6 @@
  */
 
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /**
  * Creates a mock generator object with minimal required properties
@@ -23,8 +19,8 @@ const __dirname = path.dirname(__filename);
  */
 export function createMockGenerator(options = {}, args = [], destinationRoot = process.cwd()) {
     return {
-        options: options,
-        args: args,
+        options,
+        args,
         destinationRoot: () => destinationRoot,
         destinationPath: (filepath) => {
             if (!filepath) return destinationRoot;
@@ -37,14 +33,12 @@ export function createMockGenerator(options = {}, args = [], destinationRoot = p
         },
         config: {
             getAll: () => ({}),
-            get: (key) => undefined,
-            set: (key, value) => {},
             save: () => {}
         },
         fs: {
-            exists: (filepath) => false,
-            read: (filepath) => '',
-            write: (filepath, content) => {},
+            exists: (_) => false,
+            read: (_) => '',
+            write: (_) => {},
             copyTpl: () => {}
         }
     };

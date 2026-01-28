@@ -21,15 +21,10 @@ import {
 } from '../helpers/mock-generator.js';
 import {
     PARAMETER_MATRIX,
-    generateEnvironmentVariables,
     generatePackageJsonConfig,
-    generateConfigFileContent,
     isSourceSupported,
-    getEnvVarName,
-    createMinimalValidConfig
+    getEnvVarName
 } from '../input-parsing-and-generation/property-test-utils.js';
-import fs from 'fs';
-import path from 'path';
 
 // Fast property test configuration (can run 100 iterations now!)
 const FAST_PROPERTY_CONFIG = {
@@ -230,8 +225,6 @@ describe('ConfigManager Property-Based Tests (Refactored)', () => {
             await fc.assert(fc.asyncProperty(
                 generatePackageJsonConfig(),
                 async (packageConfig) => {
-                    const mockGen = createMockGenerator();
-                    const configManager = new ConfigManager(mockGen);
                     
                     // Simulate package.json loading by checking what should be filtered
                     Object.entries(packageConfig).forEach(([param, value]) => {

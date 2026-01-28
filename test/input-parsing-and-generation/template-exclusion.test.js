@@ -153,10 +153,10 @@ describe('Template Exclusion Logic', () => {
                 templateManager.validate();
                 throw new Error('Invalid deployment target should have been rejected');
             } catch (error) {
-                if (error.message.includes('invalid-target not implemented yet')) {
-                } else {
+                if (!error.message.includes('invalid-target not implemented yet')) {
                     throw error;
                 }
+                // Expected error - test passes
             }
             
         });

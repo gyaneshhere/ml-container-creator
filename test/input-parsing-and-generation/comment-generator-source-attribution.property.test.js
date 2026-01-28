@@ -57,7 +57,7 @@ describe('Comment Generator - Configuration Source Attribution Property Tests', 
                     const config = {
                         framework: metadata.framework,
                         version: metadata.version,
-                        configSources: configSources,
+                        configSources,
                         validationLevel: metadata.validationLevel,
                         accelerator: {
                             type: 'cuda',
@@ -133,7 +133,7 @@ describe('Comment Generator - Configuration Source Attribution Property Tests', 
                     const config = {
                         framework: metadata.framework,
                         version: metadata.version,
-                        configSources: configSources,
+                        configSources,
                         instanceType: metadata.instanceType,
                         inferenceAmiVersion: 'al2-ami-sagemaker-inference-gpu-3-1',
                         accelerator: {
@@ -202,10 +202,10 @@ describe('Comment Generator - Configuration Source Attribution Property Tests', 
                 (source, envVars, framework) => {
                     // Build configuration
                     const config = {
-                        framework: framework,
+                        framework,
                         version: '1.0.0',
                         configSources: [source],
-                        envVars: envVars,
+                        envVars,
                         accelerator: {
                             type: 'cuda',
                             version: '12.1'
@@ -319,10 +319,10 @@ describe('Comment Generator - Configuration Source Attribution Property Tests', 
                 (chatTemplateSource, chatTemplate, framework) => {
                     // Build configuration
                     const config = {
-                        framework: framework,
+                        framework,
                         version: '1.0.0',
-                        chatTemplate: chatTemplate,
-                        chatTemplateSource: chatTemplateSource,
+                        chatTemplate,
+                        chatTemplateSource,
                         accelerator: {
                             type: 'cuda',
                             version: '12.1'
@@ -372,7 +372,7 @@ describe('Comment Generator - Configuration Source Attribution Property Tests', 
                 (framework) => {
                     // Build configuration without chat template
                     const config = {
-                        framework: framework,
+                        framework,
                         version: '1.0.0',
                         chatTemplate: null,  // No chat template
                         accelerator: {

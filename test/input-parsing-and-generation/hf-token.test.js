@@ -42,7 +42,7 @@ describe('HuggingFace Token Feature', () => {
         it('should accept tokens with hf_ prefix', () => {
             assert.strictEqual(validateHFToken('hf_abc123'), true);
             assert.strictEqual(validateHFToken('hf_XYZ789'), true);
-            assert.strictEqual(validateHFToken('hf_' + 'a'.repeat(40)), true);
+            assert.strictEqual(validateHFToken(`hf_${  'a'.repeat(40)}`), true);
         });
 
         it('should warn for tokens without hf_ prefix', () => {

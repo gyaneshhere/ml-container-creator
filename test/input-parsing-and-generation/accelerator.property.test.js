@@ -72,7 +72,7 @@ describe('Accelerator Validation Properties', () => {
                         testData.providedMinor >= testData.requiredMinor;
                     
                     assert.strictEqual(result.compatible, shouldBeCompatible,
-                                     `CUDA ${providedVersion} should ${shouldBeCompatible ? 'be' : 'not be'} compatible with ${requiredVersion}`);
+                        `CUDA ${providedVersion} should ${shouldBeCompatible ? 'be' : 'not be'} compatible with ${requiredVersion}`);
                     
                     if (shouldBeCompatible) {
                         assert(result.info, 'Compatible result should have info message');
@@ -125,7 +125,7 @@ describe('Accelerator Validation Properties', () => {
                         testData.providedMinor >= testData.requiredMinor;
                     
                     assert.strictEqual(result.compatible, shouldBeCompatible,
-                                     `Neuron SDK ${providedVersion} should ${shouldBeCompatible ? 'be' : 'not be'} compatible with ${requiredVersion}`);
+                        `Neuron SDK ${providedVersion} should ${shouldBeCompatible ? 'be' : 'not be'} compatible with ${requiredVersion}`);
                     
                     if (shouldBeCompatible) {
                         assert(result.info, 'Compatible result should have info message');
@@ -178,7 +178,7 @@ describe('Accelerator Validation Properties', () => {
                         testData.providedMinor >= testData.requiredMinor;
                     
                     assert.strictEqual(result.compatible, shouldBeCompatible,
-                                     `ROCm ${providedVersion} should ${shouldBeCompatible ? 'be' : 'not be'} compatible with ${requiredVersion}`);
+                        `ROCm ${providedVersion} should ${shouldBeCompatible ? 'be' : 'not be'} compatible with ${requiredVersion}`);
                     
                     if (shouldBeCompatible) {
                         assert(result.info, 'Compatible result should have info message');
@@ -219,7 +219,7 @@ describe('Accelerator Validation Properties', () => {
                     const result = validator.validate(frameworkConfig, instanceConfig);
                     
                     assert.strictEqual(result.compatible, true,
-                                     'CPU should always be compatible');
+                        'CPU should always be compatible');
                     assert(result.info, 'CPU result should have info message');
                     
                     return true;
@@ -261,11 +261,11 @@ describe('Accelerator Validation Properties', () => {
                     
                     assert(typeof result === 'object', 'Validation result must be an object');
                     assert(typeof result.compatible === 'boolean', 
-                           'Validation result must have compatible boolean');
+                        'Validation result must have compatible boolean');
                     
                     if (testData.acceleratorType === 'cpu') {
                         assert.strictEqual(result.compatible, true,
-                                         'CPU should always be compatible');
+                            'CPU should always be compatible');
                     }
                     
                     return true;
