@@ -1122,7 +1122,7 @@ export default class ConfigManager {
                 'sklearn': ['flask', 'fastapi'],
                 'xgboost': ['flask', 'fastapi'],
                 'tensorflow': ['flask', 'fastapi'],
-                'transformers': ['vllm', 'sglang', 'tensorrt-llm']
+                'transformers': ['vllm', 'sglang', 'tensorrt-llm', 'lmi', 'djl']
             },
             modelFormats: {
                 'sklearn': ['pkl', 'joblib'],

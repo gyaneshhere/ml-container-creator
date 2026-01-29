@@ -278,5 +278,113 @@ export default {
             },
             notes: "SGLang 0.2.0 features RadixAttention for automatic KV cache reuse. Experimental support"
         }
+    },
+    "lmi": {
+        "14.0.0": {
+            baseImage: "763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.32.0-lmi14.0.0-cu126",
+            accelerator: {
+                type: "cuda",
+                version: "12.6",
+                versionRange: { min: "12.0", max: "12.6" }
+            },
+            envVars: {
+                "SERVING_PORT": "8080",
+                "OPTION_TENSOR_PARALLEL_DEGREE": "1",
+                "OPTION_MAX_ROLLING_BATCH_SIZE": "32",
+                "OPTION_DTYPE": "fp16"
+            },
+            inferenceAmiVersion: "al2-ami-sagemaker-inference-gpu-3-2",
+            recommendedInstanceTypes: ["ml.g5.xlarge", "ml.g5.2xlarge", "ml.g5.4xlarge", "ml.g5.12xlarge"],
+            validationLevel: "tested",
+            profiles: {
+                "vllm-backend": {
+                    displayName: "vLLM Backend",
+                    description: "Use vLLM as the inference backend for LMI",
+                    envVars: {
+                        "OPTION_ROLLING_BATCH": "vllm",
+                        "OPTION_MAX_ROLLING_BATCH_SIZE": "32",
+                        "OPTION_DTYPE": "fp16"
+                    },
+                    recommendedInstanceTypes: ["ml.g5.xlarge", "ml.g5.2xlarge"],
+                    notes: "vLLM backend provides excellent performance for most models"
+                },
+                "tensorrt-backend": {
+                    displayName: "TensorRT-LLM Backend",
+                    description: "Use TensorRT-LLM for maximum performance",
+                    envVars: {
+                        "OPTION_ROLLING_BATCH": "tensorrt-llm",
+                        "OPTION_MAX_ROLLING_BATCH_SIZE": "16",
+                        "OPTION_DTYPE": "fp16"
+                    },
+                    recommendedInstanceTypes: ["ml.g5.2xlarge", "ml.g5.4xlarge"],
+                    notes: "TensorRT-LLM provides best performance but requires model compilation"
+                },
+                "lmi-dist": {
+                    displayName: "LMI-Dist (DeepSpeed)",
+                    description: "Use LMI-Dist with DeepSpeed for large models",
+                    envVars: {
+                        "OPTION_ROLLING_BATCH": "lmi-dist",
+                        "OPTION_TENSOR_PARALLEL_DEGREE": "4",
+                        "OPTION_MAX_ROLLING_BATCH_SIZE": "64"
+                    },
+                    recommendedInstanceTypes: ["ml.g5.12xlarge", "ml.g5.48xlarge"],
+                    notes: "Best for very large models requiring multi-GPU tensor parallelism"
+                },
+                "auto": {
+                    displayName: "Auto Backend Selection",
+                    description: "Let LMI automatically select the best backend",
+                    envVars: {
+                        "OPTION_MAX_ROLLING_BATCH_SIZE": "32",
+                        "OPTION_DTYPE": "fp16"
+                    },
+                    recommendedInstanceTypes: ["ml.g5.xlarge", "ml.g5.2xlarge", "ml.g5.4xlarge"],
+                    notes: "LMI will analyze your model and select the optimal backend automatically"
+                }
+            },
+            notes: "AWS Large Model Inference (LMI) 14.0.0 with automatic backend selection. Supports vLLM, TensorRT-LLM, LMI-Dist, and Transformers NeuronX backends"
+        }
+    },
+    "djl": {
+        "0.32.0": {
+            baseImage: "deepjavalibrary/djl-serving:0.32.0-pytorch-cu126",
+            accelerator: {
+                type: "cuda",
+                version: "12.6",
+                versionRange: { min: "11.8", max: "12.6" }
+            },
+            envVars: {
+                "SERVING_PORT": "8080",
+                "OPTION_TENSOR_PARALLEL_DEGREE": "1",
+                "OPTION_DEVICE_MAP": "auto"
+            },
+            inferenceAmiVersion: "al2-ami-sagemaker-inference-gpu-3-2",
+            recommendedInstanceTypes: ["ml.g5.xlarge", "ml.g5.2xlarge", "ml.g5.4xlarge"],
+            validationLevel: "community-validated",
+            profiles: {
+                "pytorch": {
+                    displayName: "PyTorch Engine",
+                    description: "Use PyTorch as the inference engine",
+                    envVars: {
+                        "ENGINE": "Python",
+                        "OPTION_DEVICE_MAP": "auto",
+                        "BATCH_SIZE": "1"
+                    },
+                    recommendedInstanceTypes: ["ml.g5.xlarge", "ml.g5.2xlarge"],
+                    notes: "PyTorch engine provides good compatibility with HuggingFace models"
+                },
+                "multi-gpu": {
+                    displayName: "Multi-GPU",
+                    description: "Tensor parallel across multiple GPUs",
+                    envVars: {
+                        "ENGINE": "Python",
+                        "OPTION_TENSOR_PARALLEL_DEGREE": "4",
+                        "OPTION_DEVICE_MAP": "auto"
+                    },
+                    recommendedInstanceTypes: ["ml.g5.12xlarge", "ml.g5.48xlarge"],
+                    notes: "Distribute model across multiple GPUs for large models"
+                }
+            },
+            notes: "DJL Serving 0.32.0 with PyTorch backend. Flexible Java-based serving framework with Python engine support"
+        }
     }
 }

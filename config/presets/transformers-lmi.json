@@ -1,0 +1,27 @@
+{
+  "name": "Transformers LMI Preset",
+  "description": "AWS Large Model Inference (LMI) configuration with automatic backend selection",
+  "config": {
+    "framework": "transformers",
+    "modelServer": "lmi",
+    "frameworkVersion": "14.0.0",
+    "instanceType": "gpu-enabled",
+    "awsRegion": "us-east-1",
+    "includeTesting": true,
+    "testTypes": ["hosted-model-endpoint"],
+    "includeSampleModel": false,
+    "skipPrompts": true
+  },
+  "environment": {
+    "OPTION_ROLLING_BATCH": "auto",
+    "OPTION_MAX_ROLLING_BATCH_SIZE": "32",
+    "OPTION_DTYPE": "fp16",
+    "OPTION_GPU_MEMORY_UTILIZATION": "0.9"
+  },
+  "dockerOptions": {
+    "baseImage": "763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.32.0-lmi14.0.0-cu126",
+    "gpuSupport": true,
+    "sharedMemorySize": "2g"
+  },
+  "notes": "LMI automatically selects the best backend (vLLM, TensorRT-LLM, LMI-Dist) based on your model architecture"
+}

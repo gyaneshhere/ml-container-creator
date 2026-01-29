@@ -8,7 +8,30 @@ echo "Starting vLLM server"
 echo "Starting SGLang server"
 <% } else if (modelServer === 'tensorrt-llm') { %>
 echo "Starting TensorRT-LLM server"
+<% } else if (modelServer === 'lmi') { %>
+echo "Starting LMI (Large Model Inference) server"
+<% } else if (modelServer === 'djl') { %>
+echo "Starting DJL Serving server"
 <% } %>
+
+<% if (modelServer === 'lmi' || modelServer === 'djl') { %>
+# LMI/DJL containers use serving.properties for configuration
+# The configuration file should be at /opt/ml/model/serving.properties
+# DJL Serving will automatically start with this configuration
+
+if [ ! -f /opt/ml/model/serving.properties ]; then
+    echo "Error: serving.properties not found at /opt/ml/model/serving.properties"
+    exit 1
+fi
+
+echo "Using configuration from /opt/ml/model/serving.properties"
+cat /opt/ml/model/serving.properties
+
+# DJL Serving is already configured in the base image
+# This script is not typically needed for LMI/DJL as they have their own entrypoint
+# But we provide it for consistency with other model servers
+exit 0
+<% } else { %>
 
 # Initialize server arguments
 <% if (modelServer === 'tensorrt-llm') { %>
@@ -90,4 +113,5 @@ if [ -z "$TRTLLM_MODEL" ]; then
     exit 1
 fi
 exec trtllm-serve serve "$TRTLLM_MODEL" "${SERVER_ARGS[@]}"
+<% } %>
 <% } %>

@@ -1,0 +1,26 @@
+{
+  "name": "Transformers DJL Preset",
+  "description": "DJL Serving configuration with PyTorch backend",
+  "config": {
+    "framework": "transformers",
+    "modelServer": "djl",
+    "frameworkVersion": "0.32.0",
+    "instanceType": "gpu-enabled",
+    "awsRegion": "us-east-1",
+    "includeTesting": true,
+    "testTypes": ["hosted-model-endpoint"],
+    "includeSampleModel": false,
+    "skipPrompts": true
+  },
+  "environment": {
+    "ENGINE": "Python",
+    "OPTION_DEVICE_MAP": "auto",
+    "OPTION_TENSOR_PARALLEL_DEGREE": "1"
+  },
+  "dockerOptions": {
+    "baseImage": "deepjavalibrary/djl-serving:0.32.0-pytorch-cu126",
+    "gpuSupport": true,
+    "sharedMemorySize": "2g"
+  },
+  "notes": "DJL Serving provides flexible model serving with Java-based infrastructure and Python engine support"
+}

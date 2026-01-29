@@ -331,7 +331,9 @@ describe('Error Handling and Validation', () => {
                 { framework: 'sklearn', modelServer: 'flask' },
                 { framework: 'sklearn', modelServer: 'fastapi' },
                 { framework: 'transformers', modelServer: 'vllm' },
-                { framework: 'transformers', modelServer: 'sglang' }
+                { framework: 'transformers', modelServer: 'sglang' },
+                { framework: 'transformers', modelServer: 'lmi' },
+                { framework: 'transformers', modelServer: 'djl' }
             ];
             
             validCombinations.forEach(({ framework, modelServer }) => {

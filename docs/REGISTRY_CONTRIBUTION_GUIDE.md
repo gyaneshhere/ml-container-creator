@@ -130,6 +130,66 @@ The Framework Registry stores framework-specific configurations indexed by frame
 }
 ```
 
+### Example: Adding LMI (Large Model Inference)
+
+```javascript
+{
+  "lmi": {
+    "14.0.0": {
+      "baseImage": "763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.32.0-lmi14.0.0-cu126",
+      "accelerator": {
+        "type": "cuda",
+        "version": "12.6",
+        "versionRange": {
+          "min": "12.0",
+          "max": "12.6"
+        }
+      },
+      "envVars": {
+        "SERVING_PORT": "8080",
+        "OPTION_TENSOR_PARALLEL_DEGREE": "1",
+        "OPTION_MAX_ROLLING_BATCH_SIZE": "32",
+        "OPTION_DTYPE": "fp16"
+      },
+      "inferenceAmiVersion": "al2-ami-sagemaker-inference-gpu-3-2",
+      "recommendedInstanceTypes": [
+        "ml.g5.xlarge",
+        "ml.g5.2xlarge",
+        "ml.g5.4xlarge",
+        "ml.g5.12xlarge"
+      ],
+      "validationLevel": "tested",
+      "profiles": {
+        "vllm-backend": {
+          "displayName": "vLLM Backend",
+          "description": "Use vLLM as the inference backend for LMI",
+          "envVars": {
+            "OPTION_ROLLING_BATCH": "vllm",
+            "OPTION_MAX_ROLLING_BATCH_SIZE": "32",
+            "OPTION_DTYPE": "fp16"
+          },
+          "recommendedInstanceTypes": ["ml.g5.xlarge", "ml.g5.2xlarge"],
+          "notes": "vLLM backend provides excellent performance for most models"
+        },
+        "auto": {
+          "displayName": "Auto Backend Selection",
+          "description": "Let LMI automatically select the best backend",
+          "envVars": {
+            "OPTION_MAX_ROLLING_BATCH_SIZE": "32",
+            "OPTION_DTYPE": "fp16"
+          },
+          "recommendedInstanceTypes": ["ml.g5.xlarge", "ml.g5.2xlarge", "ml.g5.4xlarge"],
+          "notes": "LMI will analyze your model and select the optimal backend automatically"
+        }
+      },
+      "notes": "AWS Large Model Inference (LMI) with automatic backend selection. Configuration uses serving.properties file instead of environment variables"
+    }
+  }
+}
+```
+
+**Note:** LMI and DJL use `serving.properties` configuration files instead of environment variables. The `envVars` in the registry are converted to properties format during generation.
+
 ### Accelerator Types
 
 #### CUDA (NVIDIA GPUs)

@@ -128,6 +128,17 @@ ARG BASE_IMAGE=lmsysorg/sglang:v0.5.4.post1
 #      Password: <your-ngc-api-key>
 # Using a stable release for better SageMaker compatibility
 ARG BASE_IMAGE=nvcr.io/nvidia/tensorrt-llm/release:1.2.0rc8
+<% } else if (modelServer === 'lmi') { %>
+# AWS Large Model Inference (LMI) Container
+# LMI containers are pre-built by AWS and include DJL Serving with optimized inference libraries
+# Available backends: vLLM, TensorRT-LLM, LMI-Dist (DeepSpeed), Transformers NeuronX
+# Documentation: https://docs.djl.ai/master/docs/serving/serving/docs/lmi/index.html
+ARG BASE_IMAGE=763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.32.0-lmi14.0.0-cu126
+<% } else if (modelServer === 'djl') { %>
+# DJL Serving Container
+# Deep Java Library serving with support for multiple inference backends
+# Documentation: https://djl.ai/
+ARG BASE_IMAGE=deepjavalibrary/djl-serving:0.32.0-pytorch-cu126
 <% } %>
 
 FROM ${BASE_IMAGE}
@@ -154,6 +165,14 @@ ENV UCX_TLS=tcp,self,sm
 ENV UCX_NET_DEVICES=all
 ENV NCCL_IB_DISABLE=1
 ENV NCCL_P2P_DISABLE=1
+<% } else if (modelServer === 'lmi' || modelServer === 'djl') { %>
+# LMI/DJL Configuration
+# Model configuration is done via serving.properties file
+# The model will be loaded from HuggingFace Hub or S3
+ENV HF_MODEL_ID="<%= modelName %>"
+
+# DJL Serving listens on port 8080 by default (SageMaker requirement)
+ENV SERVING_PORT=8080
 <% } %>
 
 <% if (hfToken) { %>
@@ -199,6 +218,17 @@ COPY code/start_server.sh /usr/bin/start_server.sh
 RUN chmod +x /usr/bin/start_server.sh
 
 ENTRYPOINT [ "/usr/bin/start_server.sh" ]
+<% } else if (modelServer === 'lmi' || modelServer === 'djl') { %>
+# Create serving.properties configuration file for LMI/DJL
+RUN mkdir -p /opt/ml/model
+COPY code/serving.properties /opt/ml/model/serving.properties
+
+<% if (comments && comments.troubleshooting) { %>
+<%= comments.troubleshooting %>
+<% } %>
+
+# LMI/DJL containers use their own entrypoint
+# The container will automatically start DJL Serving with the configuration
 <% } else { %>
 COPY code/serve /usr/bin/serve
 RUN chmod 777 /usr/bin/serve

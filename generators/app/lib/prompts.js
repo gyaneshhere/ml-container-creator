@@ -144,7 +144,7 @@ const modelServerPrompts = [
         message: 'Which model server are you serving with?',
         choices: (answers) => {
             if (answers.framework === 'transformers') {
-                return ['vllm', 'sglang', 'tensorrt-llm'];
+                return ['vllm', 'sglang', 'tensorrt-llm', 'lmi', 'djl'];
             }
             return ['flask', 'fastapi'];
         }
