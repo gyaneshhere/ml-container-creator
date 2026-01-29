@@ -120,7 +120,7 @@ export default class TemplateManager {
     validate() {
         const supportedOptions = {
             frameworks: ['sklearn', 'xgboost', 'tensorflow', 'transformers'],
-            modelServer: ['flask', 'fastapi', 'vllm', 'sglang', 'tensorrt-llm'],
+            modelServer: ['flask', 'fastapi', 'vllm', 'sglang', 'tensorrt-llm', 'lmi', 'djl'],
             deployment: ['sagemaker', 'codebuild'],
             testTypes: ['local-model-cli', 'local-model-server', 'hosted-model-endpoint'],
             instanceTypes: ['cpu-optimized', 'gpu-enabled', 'custom'],

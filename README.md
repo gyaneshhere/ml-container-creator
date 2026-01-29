@@ -31,7 +31,7 @@ Every generated project includes:
 - **AWS deployment scripts** for ECR and SageMaker
 - **Multi-framework support** (sklearn, XGBoost, TensorFlow, vLLM, SGLang, TensorRT-LLM)
 - **🆕 Intelligent configuration system** with community-validated settings
-  - Framework Registry: Pre-configured settings for framework versions
+  - Framework Registry: Pre-configured settings for framework versions (vLLM, SGLang, TensorRT-LLM, LMI, DJL)
   - Model Registry: Model-specific optimizations and overrides
   - HuggingFace Hub integration: Automatic model metadata fetching
 - **🆕 Accelerator compatibility validation** (CUDA, Neuron SDK, CPU, ROCm)

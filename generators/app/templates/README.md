@@ -25,7 +25,7 @@ All user answers from the prompting phase are available in templates:
 | `destinationDir` | string | Output directory | `./my-ml-model-2024-12-02` |
 | `framework` | string | ML framework | `sklearn`, `xgboost`, `tensorflow`, `transformers` |
 | `modelFormat` | string | Model serialization format | `pkl`, `joblib`, `json`, `keras`, `h5` |
-| `modelServer` | string | Model serving framework | `flask`, `fastapi`, `vllm`, `sglang` |
+| `modelServer` | string | Model serving framework | `flask`, `fastapi`, `vllm`, `sglang`, `lmi`, `djl` |
 | `includeSampleModel` | boolean | Include sample model | `true`, `false` |
 | `includeTesting` | boolean | Include test suite | `true`, `false` |
 | `testTypes` | string[] | Selected test types | `['local-model-cli', 'hosted-model-endpoint']` |
@@ -43,7 +43,8 @@ templates/
 │   ├── flask/              # Flask-specific implementation
 │   ├── model_handler.py    # Model loading and inference (traditional ML)
 │   ├── serve.py            # Flask/FastAPI server (traditional ML)
-│   ├── serve               # vLLM/SGLang entrypoint (transformers)
+│   ├── serve               # vLLM/SGLang/TensorRT-LLM entrypoint (transformers)
+│   ├── serving.properties  # LMI/DJL configuration (transformers with lmi/djl)
 │   └── start_server.py     # Server startup script (traditional ML)
 ├── deploy/                 # Deployment scripts
 │   ├── build_and_push.sh   # Build Docker image and push to ECR
@@ -85,6 +86,13 @@ When `modelServer === 'tensorrt-llm'`:
   - `nginx-tensorrt.conf` - Nginx reverse proxy for OpenAI API compatibility
   - `code/start_server.sh` - Startup script that launches TensorRT-LLM and nginx
 - **Architecture**: TensorRT-LLM runs on port 8081, nginx proxies SageMaker endpoints on port 8080
+
+### LMI/DJL Specific Files
+When `modelServer === 'lmi'` or `modelServer === 'djl'`:
+- **Additional Included Files**:
+  - `code/serving.properties` - Configuration file for LMI/DJL serving
+- **Architecture**: Uses AWS pre-built containers with DJL Serving
+- **Configuration**: Model and serving parameters defined in serving.properties instead of environment variables
 
 ### Traditional ML Configuration
 When `framework !== 'transformers'`:

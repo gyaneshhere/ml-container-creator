@@ -56,10 +56,16 @@ export const generateInvalidFrameworkCombination = () => {
     const invalidCombinations = [
         { framework: 'sklearn', modelServer: 'vllm' },
         { framework: 'sklearn', modelServer: 'sglang' },
+        { framework: 'sklearn', modelServer: 'lmi' },
+        { framework: 'sklearn', modelServer: 'djl' },
         { framework: 'xgboost', modelServer: 'vllm' },
         { framework: 'xgboost', modelServer: 'sglang' },
+        { framework: 'xgboost', modelServer: 'lmi' },
+        { framework: 'xgboost', modelServer: 'djl' },
         { framework: 'tensorflow', modelServer: 'vllm' },
         { framework: 'tensorflow', modelServer: 'sglang' },
+        { framework: 'tensorflow', modelServer: 'lmi' },
+        { framework: 'tensorflow', modelServer: 'djl' },
         { framework: 'transformers', modelServer: 'flask' },
         { framework: 'transformers', modelServer: 'fastapi' }
     ];
@@ -331,7 +337,7 @@ export const generateRealisticPackageJsonConfig = () => fc.record({
     
     // Unsupported in package.json (should be ignored)
     framework: fc.option(fc.constantFrom('sklearn', 'xgboost', 'tensorflow', 'transformers')),
-    modelServer: fc.option(fc.constantFrom('flask', 'fastapi', 'vllm', 'sglang')),
+    modelServer: fc.option(fc.constantFrom('flask', 'fastapi', 'vllm', 'sglang', 'lmi', 'djl')),
     deployTarget: fc.option(fc.constantFrom('sagemaker', 'codebuild')),
     codebuildComputeType: fc.option(fc.constantFrom('BUILD_GENERAL1_SMALL', 'BUILD_GENERAL1_MEDIUM', 'BUILD_GENERAL1_LARGE')),
     codebuildProjectName: fc.option(generateCodeBuildProjectName()),
@@ -356,7 +362,7 @@ export const generateEdgeCaseScenario = () => fc.oneof(
     // All optional parameters missing
     fc.record({
         framework: fc.constantFrom('sklearn', 'xgboost', 'tensorflow', 'transformers'),
-        modelServer: fc.constantFrom('flask', 'fastapi', 'vllm', 'sglang'),
+        modelServer: fc.constantFrom('flask', 'fastapi', 'vllm', 'sglang', 'lmi', 'djl'),
         instanceType: fc.constantFrom('cpu-optimized', 'gpu-enabled'),
         projectName: generateProjectName()
         // All optional parameters omitted
