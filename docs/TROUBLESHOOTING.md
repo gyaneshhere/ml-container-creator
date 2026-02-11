@@ -82,8 +82,8 @@ node --version
 nvm install node  # Gets latest stable
 nvm use node
 
-# Or use mise
-mise install
+# Or use nvm
+nvm use node
 
 # Pro tip: When encountering ES6 import/export errors, 
 # this is usually a Node.js version compatibility issue

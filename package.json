@@ -31,7 +31,10 @@
     "start": "yo ml-container-creator",
     "dev": "npm link && yo ml-container-creator",
     "clean": "rm -rf test-output-*",
-    "validate": "npm run lint && npm run test:all"
+    "validate": "npm run lint && npm run test:all",
+    "docs:serve": "mkdocs serve",
+    "docs:build": "mkdocs build",
+    "docs:deploy": "mkdocs gh-deploy"
   },
   "dependencies": {
     "@microsoft/eslint-formatter-sarif": "^3.1.0",
