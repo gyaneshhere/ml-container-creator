@@ -54,8 +54,8 @@ nav:
           - Predictive Models: predictive-models.md
           - Generative Models: generative-models.md
       - Frameworks: 
-          - Hosting Frameworks: hosting-frameworks.md
-          - Serving Frameworks: serving-frameworks.md
+          - HTTP Serving: http-serving.md
+          - LLM Serving: llm-serving.md
       - Containerization: containerization.md
       - Deployment & Inference: deployments.md
       - Additional Features & Misc:

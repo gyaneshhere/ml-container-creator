@@ -44,63 +44,25 @@ MCC is built to deploy models to [Amazon SageMaker AI Managed Inference endpoint
 
 Users must provide MCC a model to be deployed within the container assets. Failure to provide a model to MCC at generation time will result in unpredictable behavior which is dependent on the selected framework. 
 
-MCC is built to support the containerization of specific model assets which are built using specific model training frameworks. Models are deployed directly into the container definition using Dockerfile directives. Alternatively, models can be pulled from model hubs using model serving frameworks. These two approaches are treated differentely by MCC. For more information, review the deep dives on [predictive](predictive-models.md) and [generative](generative-models.md) models.
+MCC is built to support the containerization of specific model assets which are built using specific model training frameworks. Models are deployed directly into the container definition using Dockerfile directives. Alternatively, models can be pulled from model hubs using model serving frameworks. These two approaches are treated differentely by MCC. 
+
+For more information, review the deep dives on [predictive](predictive-models.md) and [generative](generative-models.md) models.
 
 ### ML Hosting & Serving Frameworks
 MCC supports several predictive ML and generative AI frameworks for model serving. This list is evolving, check Frameworks section for more details on how to use these for advanced use cases.
 
- Framework | Model Formats | Use Case |
-|-----------|---------------|----------|
-| scikit-learn | pkl, joblib | Prediction/ Classification | 
-| XGBoost | json, model, ubj | Prediction/ Classification | 
-| TensorFlow | keras, h5, SavedModel | Prediction/ Classification, Deep learning, neural networks |
-| vLLM | LLM | Generation | 
-| SGLang | LLM | Generation | 
-| TensorRT-LLM | LLM | Generation | 
-| LMI | LLM | Generation | 
-| DJL | LLM | Generation | 
+For more information, check out the sections on supported [HTTP Servers](http-serving.md) and [LLM Servers](llm-serving.md).
 
-#### Supported Web Servers for Predictive Models
-Predictive models trained using TensorFlow, Sci-Kit Learn, and other ML frameworks are not built to receive inference requests over HTTP. These frameworks require an additional web server to support inference and SageMaker AI health check requests over HTTP. 
+## Container Building
 
-| Web Server | Description |
-|------------|----------------------|
-| Flask |Lightweight Python web framework |
-| FastAPI | Modern, fast API framework with automatic docs |
+MCC generates Docker containers that package everything needed to serve model inference requests over HTTP. The generated Dockerfile bundles the appropriate base image, application code (model handlers and web servers), configuration files, and dependencies. For traditional ML frameworks (scikit-learn, XGBoost, TensorFlow), model artifacts are included directly in the container. For transformer models, the container downloads models from HuggingFace Hub at runtime to keep image sizes manageable.
 
-This is not a constraint for generative models, as the LLM serving frameworks supported by MCC feature built-in capabilities for handling HTTP requests.
+The build process follows a standard Docker workflow: build the image locally, push it to Amazon Elastic Container Registry (ECR), and deploy to SageMaker. MCC generates deployment scripts (`build_and_push.sh` and `deploy.sh`) that automate this entire process, handling AWS authentication, ECR repository creation, and SageMaker resource provisioning. The resulting container exposes SageMaker-compatible endpoints (`/ping` for health checks and `/invocations` for inference) on port 8080, ready for production deployment.
 
-### Container Building
-The core functionality of MCC is to build containers that can serve inference requests over HTTP. MCC uses Docker to build container files, packing in relevant code, configuration, and models in some cases, into the container object. Images are deployed to [Amazon Elastic Container Registry (ECR)](https://aws.amazon.com/ecr/) for storage until they are ultimately deployed.
 
-#### Local Building
-Generated MCC projects are effectively just Dockerfiles with supporting code. These Dockerfiles can be built to create images and launched to a local container using docker commands. The Yeoman REPL facilitates the generation of a local image builder if the testing suite option is specified. This option generates a shell script which effectively performs the following steps:
-1. Build the image locally using `docker` style commands
-2. Deploy the container locally
-3. Test the `/ping` endpoint to validate health-checks
-4. Validate the `/invocations` endpoint to validate inference responses
-    - This is designed to work for the Abalone sample model. Users are responsible for modifying these scripts for their own models.
-!!! warning "`exec` errors"
-    Locally built containers may result in `exec` errors if deployed onto different architectures. Users can experiment with the `--platform` flag for the `docker` binary, but for best results on Amazon SageMaker AI Managed Inference endpoints, users should opt to build with AWS CodeBuild.
-
-#### AWS CodeBuild
-[AWS CodeBuild](https://aws.amazon.com/codebuild/) is a managed service for building and testing code with automatic scaling. AWS CodeBuild can be used to build MCC containers remotely. Using AWS CodeBuild requires session credentials and an appropriately permissioned IAM role to submit a build. MCC automatically generates the appropriately scoped policy document and build specification necessary to build the container and store it to Amazon ECR. This is the preferred method for building MCC containers that can be deployed to an endpoint.
+For more information, check out the section on [Containerization](containerization.md).
 
 ### Endpoint Deployment
-Once an MCC container is built, it can be launched as a process. 
+Once an MCC container is built, it can be launched as a process. MCC is opinionated about deployment targets, building containers specifically designed to run on Amazon Sagemaker AI managed inference endpoints. Currently, these are real-time endpoints. 
 
-#### Local Deployment
-Local endpoints can be deployed once the image has been built. Locak deployments are most easily accommodated by users who elect to build the container locally. Otherwise, users will have to download the container image from Amazon ECR to launch it locally. 
-
-!!! warning "Local LLM Containers"
-    Local deployment should be used sparingly. Predictive containers built on ML frameworks like XGBoost can easily be launched locally given their relatively small size and lack of GPU dependencies. This capability may not work for LLM-based serving frameworks. Images built from SGlang for example are quite large, and require GPU resources to be made available to your container. 
-
-#### Amazon SageMaker AI Managed Inference
-Amazon SageMaker AI Managed Inference is the preferred deployment target for MCC containers. MCC containers are built specifically for SageMaker endpoints, and users have the ability to select their preferred instance type, family and size when generating an MCC project. 
-
-!!! info "Real-Time Only"
-    At this time, real-time endpoints are the only supported Sagemaker AI managed inference endpoints supported by MCC.
-
-#### Amazon SageMaker HyperPodd
-!!! todo "Under Construction"
-    This feature is roadmapped, but currently not supported.
+For more information, check out the deployment deep-dive on the [Deployment & Inference](deployments.md) page.
