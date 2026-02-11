@@ -44,7 +44,7 @@ yo ml-container-creator
 # Enter: $HF_TOKEN (to use env var) or hf_your_token_here (direct)
 ```
 4. Config File
-There are several ways to configure MCC, this snippet is generally the approach regardless of the configuration file. See the [Configuration Guide](configuration-guide.md) for more details.
+There are several ways to configure MCC, this snippet is generally the approach regardless of the configuration file. See the [Configuration Guide](configuration.md) for more details.
 ```json
 {
   "framework": "transformers",
