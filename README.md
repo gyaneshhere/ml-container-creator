@@ -542,8 +542,8 @@ For more authentication troubleshooting, see the [Troubleshooting Guide](./TROUB
 - AWS CLI 2+
 
 ### For Contributors
-- [mise](https://mise.jdx.dev/) - Development environment manager
-- All tools are automatically managed via `mise.toml`
+- Node.js 24+ and npm
+- All other tools managed via npm scripts
 
 ## 🌟 Open Source & Community Driven
 
@@ -709,23 +709,25 @@ Your input shapes the future of this tool.
 
 ### Development Setup
 
-This project uses [mise](https://mise.jdx.dev/) for development environment management:
+Quick contribution setup:
 
 ```bash
-# Quick contribution setup
+# Clone and setup
 git clone https://github.com/awslabs/ml-container-creator
 cd ml-container-creator
 
-# Install mise (if not already installed)
-curl https://mise.run | sh
+# Ensure you're using Node.js 24+
+nvm use node  # or: nvm install 24
 
-# Install project dependencies and tools
-mise install
-mise run install
+# Install dependencies and link for local development
+npm install
+npm link
 
-# Available development tasks
-mise run test     # Run unit tests
-mise run lint     # Run linting
+# Run tests
+npm test
+
+# Run linting
+npm run lint
 
 # Make your changes and submit a PR!
 ```
@@ -843,30 +845,6 @@ npm test -- --grep "sklearn"            # Framework-specific tests
 # Run property tests for specific properties
 npm run test:property -- --grep "Property 1"  # Parameter source enforcement
 npm run test:property -- --grep "Property 10" # Parameter precedence order
-```
-
-#### Alternative Setup (Manual)
-
-If you prefer not to use mise:
-
-```bash
-# Clone and setup
-git clone https://github.com/awslabs/ml-container-creator
-cd ml-container-creator
-
-# Ensure Node.js 24.11.1+ is installed
-node --version
-
-# Install dependencies
-npm install
-npm link
-
-# Run development tasks
-npm run validate          # Complete validation (ESLint + Security + All Tests)
-npm test                  # Unit tests only
-npm run test:property     # Property-based tests only
-npm run test:watch        # Unit tests in watch mode
-npm run lint              # ESLint code quality checks
 ```
 
 ## Security

@@ -49,18 +49,29 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - User Guide:
-      - Configuration Guide: configuration.md
-      - Examples: EXAMPLES.md
-      - Troubleshooting: TROUBLESHOOTING.md
+      - How It Works: how-it-works.md
+      - Models: 
+          - Predictive Models: predictive-models.md
+          - Generative Models: generative-models.md
+      - Frameworks: 
+          - Hosting Frameworks: hosting-frameworks.md
+          - Serving Frameworks: serving-frameworks.md
+      - Containerization: containerization.md
+      - Deployment & Inference: deployments.md
+      - Additional Features & Misc:
+          - Registry: registry.md
+          - Configuration Guide: configuration.md
+          - Examples: EXAMPLES.md
+          - Troubleshooting: TROUBLESHOOTING.md
   - Developer Guide:
       - Contributing: CONTRIBUTING.md
-      - Testing Guide: testing.md
-      - Adding Features: ADDING_FEATURES.md
-      - Template System: template-system.md
-      - Project Architecture: architecture.md
-      - Coding Standards: coding-standards.md
-      - AWS/SageMaker Guide: aws-sagemaker.md
-      - Deployment: DEPLOYMENT.md
+      # - Testing Guide: testing.md
+      # - Adding Features: ADDING_FEATURES.md
+      # - Template System: template-system.md
+      # - Project Architecture: architecture.md
+      # - Coding Standards: coding-standards.md
+      # - AWS/SageMaker Guide: aws-sagemaker.md
+      # - Deployment: DEPLOYMENT.md
 
 markdown_extensions:
   - admonition
@@ -71,6 +82,8 @@ markdown_extensions:
   - tables
   - codehilite:
       guess_lang: false
+  - pymdownx.snippets:
+      base_path: docs/snippets
   - pymdownx.arithmatex:
       generic: true
   - pymdownx.betterem:
