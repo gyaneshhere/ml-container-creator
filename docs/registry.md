@@ -387,7 +387,7 @@ See [Registry Contribution Guide](REGISTRY_CONTRIBUTION_GUIDE.md) for detailed i
 
 **Solution:**
 - Check `generators/app/config/registries/` files
-- Reinstall generator: `npm install -g generator-ml-container-creator`
+- Reinstall generator
 - Report issue if problem persists
 
 ### Validation Errors
@@ -439,11 +439,7 @@ yo ml-container-creator
 
 ### Registry Versioning
 
-Registries are versioned with the generator. To use a specific version:
-
-```bash
-npm install -g generator-ml-container-creator@1.2.3
-```
+Registries are versioned with the generator.
 
 ### Programmatic Access
 

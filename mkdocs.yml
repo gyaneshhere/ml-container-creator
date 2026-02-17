@@ -59,7 +59,7 @@ nav:
       - Containerization: containerization.md
       - Deployment & Inference: deployments.md
       - Additional Features & Misc:
-          - Registry: registry.md
+          # - Registry: registry.md
           - Configuration Guide: configuration.md
           - Examples: EXAMPLES.md
           - Troubleshooting: TROUBLESHOOTING.md
