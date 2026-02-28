@@ -96,6 +96,11 @@ export default class extends Generator {
         });
 
         // Infrastructure options
+        // ── NEW CLI OPTION build target
+        this.option('build-target', {
+            type: String,
+            description: 'Where to build the container image (local | codebuild)'
+        });
         this.option('deploy-target', {
             type: String,
             description: 'Deployment target (sagemaker, codebuild)'
