@@ -255,7 +255,7 @@ export default class extends Generator {
             }
         }
     }
-
+    
     /**
      * Prompting phase - Collects user input through interactive prompts.
      * 
@@ -281,12 +281,119 @@ export default class extends Generator {
             
             return;
         }
+        const BUILD_TARGET_PROMPT = {
+          type: 'list',
+          name: 'buildTarget',
+          message: '🏗️  Where do you want to BUILD the container image?',
+          choices: [
+            {
+              name: 'Local Docker  (build on this machine, push to ECR)',
+              value: 'local',
+              short: 'Local',
+            },
+            {
+              name: 'AWS CodeBuild  (remote managed build — recommended for production/ARM)',
+              value: 'codebuild',
+              short: 'CodeBuild',
+            },
+          ],
+          default: 'local',
+          when: (answers) =>
+            !this.options['skip-prompts'] && !this.options['build-target'],
+        };
 
+        const DEPLOY_TARGET_PROMPT = {
+          type: 'list',
+          name: 'deployTarget',
+          message: '🚀  Where do you want to DEPLOY the model?',
+          choices: [
+            {
+              name: 'Amazon SageMaker Real-Time Endpoint',
+              value: 'sagemaker',
+              short: 'SageMaker',
+            },
+            {
+              name: 'Amazon SageMaker Serverless Inference',
+              value: 'sagemaker-serverless',
+              short: 'SageMaker Serverless',
+            },
+          ],
+          default: 'sagemaker',
+          when: (answers) =>
+            !this.options['skip-prompts'] && !this.options['deploy-target'],
+        };
+        const CODEBUILD_COMPUTE_PROMPT = {
+          type: 'list',
+          name: 'codebuildComputeType',
+          message: '⚙️  CodeBuild compute type?',
+          choices: [
+            { name: 'Small  — BUILD_GENERAL1_SMALL  (4 vCPU,  7 GB)',   value: 'BUILD_GENERAL1_SMALL' },
+            { name: 'Medium — BUILD_GENERAL1_MEDIUM (8 vCPU, 15 GB)',   value: 'BUILD_GENERAL1_MEDIUM' },
+            { name: 'Large  — BUILD_GENERAL1_LARGE (16 vCPU, 30 GB)',   value: 'BUILD_GENERAL1_LARGE' },
+          ],
+          default: 'BUILD_GENERAL1_MEDIUM',
+          // Only shown when CodeBuild is chosen as build target
+          when: (answers) =>
+            !this.options['skip-prompts'] &&
+            !this.options['codebuild-compute-type'] &&
+            (answers.buildTarget === 'codebuild' ||
+              this.options['build-target'] === 'codebuild'),
+        };
+        // ── NEW: region selection prompt ─────────────────────────────────────────────
+        const AWS_REGION_PROMPT = {
+          type: 'list',
+          name: 'awsRegion',
+          message: 'AWS region?',
+          choices: [
+            new this.env.adapter.Separator('── US ──────────────────────────────'),
+            { name: 'us-east-1      US East (N. Virginia)',     value: 'us-east-1' },
+            { name: 'us-east-2      US East (Ohio)',             value: 'us-east-2' },
+            { name: 'us-west-1      US West (N. California)',   value: 'us-west-1' },
+            { name: 'us-west-2      US West (Oregon)',           value: 'us-west-2' },
+            new this.env.adapter.Separator('── Europe ──────────────────────────'),
+            { name: 'eu-west-1      Europe (Ireland)',           value: 'eu-west-1' },
+            { name: 'eu-west-2      Europe (London)',            value: 'eu-west-2' },
+            { name: 'eu-west-3      Europe (Paris)',             value: 'eu-west-3' },
+            { name: 'eu-central-1   Europe (Frankfurt)',         value: 'eu-central-1' },
+            { name: 'eu-north-1     Europe (Stockholm)',         value: 'eu-north-1' },
+            new this.env.adapter.Separator('── Asia Pacific ────────────────────'),
+            { name: 'ap-northeast-1 Asia Pacific (Tokyo)',       value: 'ap-northeast-1' },
+            { name: 'ap-northeast-2 Asia Pacific (Seoul)',       value: 'ap-northeast-2' },
+            { name: 'ap-southeast-1 Asia Pacific (Singapore)',  value: 'ap-southeast-1' },
+            { name: 'ap-southeast-2 Asia Pacific (Sydney)',     value: 'ap-southeast-2' },
+            { name: 'ap-south-1     Asia Pacific (Mumbai)',     value: 'ap-south-1' },
+            new this.env.adapter.Separator('── Other ───────────────────────────'),
+            { name: 'ca-central-1   Canada (Central)',           value: 'ca-central-1' },
+            { name: 'sa-east-1      South America (São Paulo)', value: 'sa-east-1' },
+            { name: 'me-central-1   Middle East (UAE)',          value: 'me-central-1' },
+            { name: '✏️  Enter a custom region...',              value: '__custom__' },
+          ],
+          // Pre-select the region already in environment if available
+          default: process.env.AWS_REGION || 'us-east-1',
+          // Only prompt if not already specified via CLI or env var
+          when: () =>
+            !this.options['skip-prompts'] &&
+            !this.options['region'] &&
+            !process.env.AWS_REGION,
+        };
+        const AWS_REGION_CUSTOM_PROMPT = {
+          type: 'input',
+          name: 'awsRegionCustom',
+          message: '  Enter AWS region code (e.g. ap-east-1):',
+          when: (answers) =>
+            !this.options['skip-prompts'] && answers.awsRegion === '__custom__',
+            validate: (value) => {
+            // AWS region format: xx-xxxxxxxx-N
+            const valid = /^[a-z]{2}-[a-z]+-\d$/.test(value);
+            return valid || `Invalid format. Expected something like "ap-east-1" or "eu-central-1".`;
+          }
+        };
         const promptRunner = new PromptRunner(this);
         const promptAnswers = await promptRunner.run();
         
         // Merge prompt answers with configuration from other sources
         this.answers = this.configManager.getFinalConfiguration(promptAnswers);
+        
         
         // Ensure all template variables are initialized
         await this._ensureTemplateVariables();
@@ -655,7 +762,102 @@ export default class extends Generator {
         // Default priority
         return priorities.default;
     }
+    /**
+     * Resolve Configuration
+     * @private
+     * @param {string} answers - LI option → env var → interactive answer → default
+     * @returns {string} buildTarget deployTarget and awsRegion
+     */
+    _resolveConfig(answers) {
+      // ── build target
+      // Priority: CLI option → env var → interactive answer → default
+      const buildTarget =
+        this.options['build-target'] ||
+        process.env.ML_BUILD_TARGET ||           // extend env var support
+        answers.buildTarget ||
+        'local';
+    
+      // ── deploy target
+      // Backward-compat: if old --deploy-target=codebuild was supplied, map it
+      // to the new split model automatically.
+      let deployTarget =
+        this.options['deploy-target'] ||
+        process.env.ML_DEPLOY_TARGET ||
+        answers.deployTarget ||
+        'sagemaker';
+    
+      // Migrate legacy value: old "codebuild" on deploy-target → new defaults
+      if (deployTarget === 'codebuild') {
+        this.log(
+          this.chalk.yellow(
+            '⚠️  --deploy-target=codebuild is deprecated.\n' +
+            '   Use --build-target=codebuild --deploy-target=sagemaker instead.\n' +
+            '   Applying automatic migration for this run.'
+          )
+        );
+        // Preserve legacy intent: codebuild build + sagemaker deploy
+        if (!this.options['build-target'] && !answers.buildTarget) {
+          this._migratedBuildTarget = 'codebuild';
+        }
+        deployTarget = 'sagemaker';
+      }
+    
+      const finalBuildTarget = this._migratedBuildTarget || buildTarget;
+    
+      // ── region
+      const awsRegion =
+        this.options['region'] ||
+        process.env.AWS_REGION ||
+        (answers.awsRegion === '__custom__' ? answers.awsRegionCustom : answers.awsRegion) ||
+        'us-east-1';
+    
+      return {
+        ...this.props,
+        buildTarget: finalBuildTarget,
+        deployTarget,
+        awsRegion,
+      };
+    }
+    // ── CLI Options Reference (v2) ───────────────────────────────────────────────
+    // --build-target   local | codebuild            (NEW in v2)
+    //                  Where the Docker image is built.
+    //                  - local:      docker build on this machine
+    //                  - codebuild:  AWS CodeBuild managed build job
+    //
+    // --deploy-target  sagemaker | sagemaker-serverless   (NARROWED in v2)
+    //                  Where the model is served. Always a SageMaker variant.
+    //                  NOTE: old value "codebuild" will be auto-migrated with a warning.
+    //
+    // --region         AWS region string, e.g. us-east-1
+    //                  Also honoured via AWS_REGION env var.
+    //                  NEW: interactive picker now shown in prompt mode when not set.
+    /**
+     *
+     *
+     *
+     */
+    _applySkipPromptsDefaults() {
+      if (!this.options['skip-prompts']) return;
 
+      this.props.buildTarget =
+        this.options['build-target'] ||
+        process.env.ML_BUILD_TARGET ||
+        'local';
+    
+      this.props.deployTarget =
+        this.options['deploy-target'] ||
+        process.env.ML_DEPLOY_TARGET ||
+        'sagemaker';
+    
+      this.props.awsRegion =
+        this.options['region'] ||
+        process.env.AWS_REGION ||
+        'us-east-1';
+    
+      this.props.codebuildComputeType =
+        this.options['codebuild-compute-type'] ||
+        (this.props.buildTarget === 'codebuild' ? 'BUILD_GENERAL1_MEDIUM' : undefined);
+    }
     /**
      * Ensure all template variables are initialized with proper defaults
      * This prevents "undefined" errors in templates
