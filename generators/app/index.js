@@ -832,9 +832,7 @@ export default class extends Generator {
     //                  Also honoured via AWS_REGION env var.
     //                  NEW: interactive picker now shown in prompt mode when not set.
     /**
-     *
-     *
-     *
+     * skip-prompts-default
      */
     _applySkipPromptsDefaults() {
       if (!this.options['skip-prompts']) return;
